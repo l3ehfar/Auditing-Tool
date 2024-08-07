@@ -1,16 +1,12 @@
 <script lang="ts">
-    import { selectClass, trainingSetBrowser } from '$lib/marcelle';
+    import { selectClass, datasetExplorerComponent } from '$lib/marcelle';
     import { marcelle } from '$lib/utils';
     import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
     import { faMagnifyingGlassMinus, faMagnifyingGlassPlus } from '$lib/icons';
-    import { onMount } from 'svelte';
-    import { writable } from 'svelte/store';
+    import { zoomLevelStore } from '$lib/store';
 
     let showDatasetWindow: boolean = false;
     let zoomLevel: number = 1;
-
-    export const updatedBatchSize = writable(6);
-
 
     function toggleDatasetWindow(): void {
         showDatasetWindow = !showDatasetWindow;
@@ -32,43 +28,23 @@
     function zoomIn(): void {
         if (zoomLevel < 2) {
             zoomLevel = Math.min(zoomLevel * 2, 2); // Cap the zoom level at 2
-            updateZoom();
-            updatedBatchSize.set(4);
+            zoomLevelStore.set(zoomLevel);
         }
     }
 
     function zoomOut(): void {
         if (zoomLevel > 1) {
             zoomLevel = Math.max(zoomLevel / 2, 1); // Cap the zoom level at 1
-            updateZoom();
-            updatedBatchSize.set(6);
+            zoomLevelStore.set(zoomLevel);
         }
     }
-
-    function updateZoom(): void {
-        const images = document.querySelectorAll('.dataset img') as NodeListOf<HTMLImageElement>;
-        images.forEach(img => {
-            img.style.transform = `scale(${zoomLevel})`;
-        });
-    }
-
-    onMount(() => {
-        updateZoom();
-    });
 </script>
 
-
 <h1 class="title">Dataset Browser</h1>
-
 <div class="content">
     <div class="marcelle card">
         <h3>select a category</h3>
         <div class="selector" use:marcelle={selectClass}></div>
-    </div>
-    <div class="marcelle card">
-        <!-- <div class="batch-size-display">
-            Current Batch Size: {$updatedBatchSize}
-        </div> -->
         <div class="conf-row dataset-tools">
             <button class="icon" on:click={zoomOut}>
                 <FontAwesomeIcon icon={faMagnifyingGlassMinus} />
@@ -92,7 +68,7 @@
                 cancel selection
             </button>
         </div>
-        <div use:marcelle={trainingSetBrowser} class="dataset" />
+        <div use:marcelle={datasetExplorerComponent} class="dataset" />
     </div>
     <div class="conf-row btn-container">
         <div class="dropdown dropdown-top dropdown-end">
@@ -142,111 +118,128 @@
 {/if}
 
 <style>
-    :global(body) {
-       margin: 0;
-       padding: 0;
-       box-sizing: border-box;
-       height: 100vh;
-       display: flex;
-       flex-direction: column;
-   }
-   .content {
-       width: 100%;
-       max-width: var(--column-width);
-       margin: 0 auto;
-       margin-top: 40px;
-       background-color: oklch(var(--b2));
-       display: flex;
-       flex-direction: column;
-       height: calc(100vh - 40px); 
-   }
-   .title {
-       position: absolute;
-       top: 0;
-       left: 0;
-       font-size: 1rem;
-       margin-left: 10px;
-       margin-top: 10px;
-   }
-   .card {
-       padding-top: 0;
-   }
-   .selector {
-       padding-top: 10px;
-       margin-top: 0;
-   }
-   .btn {
-       margin: 2px;
-       color: var(--heading-color);
-   }
-   .badge {
-       margin: 2px;
-       padding-top: 10px;
-       padding-bottom: 12px;
-   }
-   .badge-outline {
-       cursor: default;
-   }
-   button.badge:hover {
-       background-color: oklch(var(--b3));
-   }
-   h3 {
-       color: var(--heading-color);
-       margin-top: 5px;
-       font-size: small;
-   }
-   .icon {
-       font-size: larger;
-       margin: 2px;
-       cursor: pointer;
-   }
-   .dataset-tools {
-       display: flex;
-       justify-content: flex-end;
-       align-items: center;
-       padding-top: 10px;
-   }
-   .dataset {
-       flex-grow: 1;
-       overflow: auto;
-   }
-   
-   .conf-row.btn-container {
-       display: flex;
-       justify-content: center;
-       align-items: flex-end;
-       flex-grow: 1;
-       margin-bottom: 5px;
-   }
-   .dataset-window {
-       position: fixed;
-       top: 0;
-       left: 0;
-       width: 100%;
-       height: 100%;
-       background-color: rgba(0, 0, 0, 0.5);
-       display: flex;
-       justify-content: center;
-       align-items: center;
-       z-index: 1000;
-   }
-   
-   .window-content {
-       background-color: white;
-       padding: 20px;
-       box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-       border-radius: 10px;
-       width: 80%;
-       max-width: 600px;
-   }
-   
-   .window-header {
-       display: flex;
-       justify-content: space-between;
-       align-items: center;
-   }
-   
-   .dataset-content {
-       margin-top: 20px;
-   }
+:global(body) {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.content {
+    width: 100%;
+    max-width: var(--column-width);
+    margin: 0 auto;
+    margin-top: 40px;
+    background-color: oklch(var(--b2));
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 40px);
+}
+
+.title {
+    position: absolute;
+    top: 0;
+    left: 0;
+    font-size: 1rem;
+    margin-left: 10px;
+    margin-top: 10px;
+}
+
+.card {
+    padding-top: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.selector {
+    padding-top: 10px;
+    margin-top: 0;
+}
+
+.btn {
+    margin: 2px;
+    color: var(--heading-color);
+}
+
+.badge {
+    margin: 2px;
+    padding-top: 10px;
+    padding-bottom: 12px;
+}
+
+.badge-outline {
+    cursor: default;
+}
+
+button.badge:hover {
+    background-color: oklch(var(--b3));
+}
+
+h3 {
+    color: var(--heading-color);
+    margin-top: 5px;
+    font-size: small;
+}
+
+.icon {
+    font-size: larger;
+    margin: 2px;
+    cursor: pointer;
+}
+
+.dataset-tools {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding-top: 10px;
+}
+
+.dataset {
+    flex-grow: 1;
+    overflow: auto;
+    max-height: calc(100% - 50px); 
+}
+
+.conf-row.btn-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    margin-bottom: 5px;
+}
+
+.dataset-window {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.window-content {
+    background-color: white;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    width: 80%;
+    max-width: 600px;
+}
+
+.window-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dataset-content {
+    margin-top: 20px;
+}
+
 </style>

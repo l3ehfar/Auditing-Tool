@@ -1,6 +1,5 @@
 import '@marcellejs/core/dist/marcelle.css';
 import {
-  datasetBrowser,
   select,
   button,
   dataset,
@@ -9,6 +8,7 @@ import {
   webcam,
   type Instance,
 } from '@marcellejs/core';
+import { datasetExplorer } from './components';
 
 export const input = webcam();
 
@@ -25,8 +25,10 @@ export interface ImageInstance extends Instance {
   thumbnail: string; 
 }
 
+
 export let trainingSet = dataset<ImageInstance>('training-set-dashboard', store);
-export let trainingSetBrowser = datasetBrowser(trainingSet, { batchSize: 6 });
+export let datasetExplorerComponent = datasetExplorer(trainingSet);
+
 
 export const selectClass = select(['all', 'chef', 'police'], 'all');
 
