@@ -72,7 +72,7 @@
     </div>
     <div class="conf-row btn-container">
         <div class="dropdown dropdown-top dropdown-end">
-            <div tabIndex={0} role="button" class="btn m-1 btn-primary">explore a subset</div>
+            <div tabIndex={0} role="button" class="btn btn-sm m-1 btn-primary">explore a subset</div>
             <ul tabIndex={0} class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
               <li><button on:click={toggleDatasetWindow}>Subset 1</button></li>
               <li><button on:click={toggleDatasetWindow}>Subset 2</button></li>
@@ -80,7 +80,7 @@
           </div>
 
         <div class="dropdown dropdown-top">
-            <div tabIndex={0} role="button" class="btn m-1 btn-primary">add to a subset</div>
+            <div tabIndex={0} role="button" class="btn btn-sm m-1 btn-primary">add to a subset</div>
             <ul tabIndex={0} class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
                 <li><button>Subset 1</button></li>
                 <li><button>Subset 2</button></li>
@@ -195,6 +195,7 @@ h3 {
     justify-content: flex-end;
     align-items: center;
     padding-top: 10px;
+    margin-bottom: 4px;
 }
 
 .dataset {

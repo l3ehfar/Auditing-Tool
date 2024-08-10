@@ -4,13 +4,15 @@ import {
   dataStore,
   textInput,
   imageUpload,
-  button,
   type Instance,
   select,
   imageDisplay,
-  Stream
+  Stream,
+  text,
+  button
 } from '@marcellejs/core';
 import { datasetExplorer } from './components';
+// import { HuggingfaceModel } from './components';
 
 const store = dataStore('localStorage');
 
@@ -20,11 +22,20 @@ export interface ImageInstance extends Instance {
   thumbnail: string;
 }
 
+// export const model = huggingfaceModel({task: 'image-to-text', inference: 'api', apiToken: ''});
+
+// input.$images.subscribe(async (img) => {
+//   if(typeof img !== 'undefined'){
+//       let res = await model.predict(img);
+//       caption.$value.set(JSON.stringify(res));
+//   }
+// });
+
+export const caption = text('caption provided by the model');
 export const input = imageUpload();
 export const label = textInput();
-export const capture = button('Upload to Dataset');
-export const addToSubset = button('Upload to Subset');
-export const compare = button('Add to Comparing Tool');
+// export const addToSubset = button('Upload to Subset');
+// export const compare = button('Add to Comparing Tool');
 
 export let trainingSet = dataset<ImageInstance>('training-set-dashboard', store);
 export let datasetExplorerComponent = datasetExplorer(trainingSet);
@@ -37,22 +48,25 @@ selectClass.$value.subscribe((label) => {
   trainingSet.sift(newQuery);
 });
 
-// Handle image upload and capture button click
-const $instances = capture.$click
-  .sample(input.$images.zip((thumbnail, data) => ({ thumbnail, data }), input.$thumbnails))
-  .map(async ({ thumbnail, data }) => ({
-    x: data,
-    y: label.$value.get(),
-    thumbnail,
-  }))
-  .awaitPromises();
+export function handleCapture() {
+  const labelValue = label.$value.get();
+  const imageData = input.$images.get();
+  const thumbnailData = input.$thumbnails.get();
 
-$instances.subscribe((instance) => {
-  console.log('New instance:', instance);
-  trainingSet.create(instance);
-});
+  if (imageData && labelValue) {
+    const instance = {
+      x: imageData,
+      y: labelValue,
+      thumbnail: thumbnailData,
+    };
+    console.log('New instance:', instance);
+    trainingSet.create(instance);
+  } else {
+    console.error('No image or label available');
+  }
+}
 
-// display selected images
+// Image display logic
 const $selectedImage = datasetExplorerComponent.$selected
   .filter((selection) => selection.length === 1)
   .map(async ([id]) => {
@@ -64,7 +78,6 @@ const $selectedImage = datasetExplorerComponent.$selected
   })
   .awaitPromises()
   .map((instance) => instance?.x);
-
 
 const $uploadedImage = input.$images;
 
