@@ -4,9 +4,16 @@
     import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
     import { faMagnifyingGlassMinus, faMagnifyingGlassPlus } from '$lib/icons';
     import { zoomLevelStore } from '$lib/store';
+    import { derived } from 'svelte/store';
 
     let showDatasetWindow: boolean = false;
     let zoomLevel: number = 1;
+
+    // Create a derived store to count the selected items
+    const selectedCount = derived(
+        datasetExplorerComponent.$selected,
+        ($selected) => $selected.length
+    );
 
     function toggleDatasetWindow(): void {
         showDatasetWindow = !showDatasetWindow;
@@ -43,7 +50,7 @@
 <h1 class="title">Dataset Browser</h1>
 <div class="content">
     <div class="marcelle card">
-        <h3>select a category</h3>
+        <h3>Select a category</h3>
         <div class="selector" use:marcelle={selectClass}></div>
         <div class="conf-row dataset-tools">
             <button class="icon" on:click={zoomOut}>
@@ -52,27 +59,33 @@
             <button class="icon" on:click={zoomIn}>
                 <FontAwesomeIcon icon={faMagnifyingGlassPlus} />
             </button>
-            <div class="badge badge-outline">selected: 20/100</div>
-            <button class="badge badge-error gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  class="inline-block h-4 w-4 stroke-current">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-                cancel selection
-            </button>
+            <div class="tooltip tooltip-left tooltip-secondary custom-tooltip" data-tip="Hold Ctrl (or Cmd on Mac) to select multiple images. Hold Shift to select all images between the first and last clicked.">
+                <div class="badge badge-outline">
+                    selected: {$selectedCount}
+                </div>
+            </div>
+            {#if $selectedCount > 0}
+                <button class="badge badge-error gap-2" on:click={() => datasetExplorerComponent.$selected.set([])}>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      class="inline-block h-4 w-4 stroke-current">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    cancel selection
+                </button>
+            {/if}
         </div>
         <div use:marcelle={datasetExplorerComponent} class="dataset" />
     </div>
     <div class="conf-row btn-container">
         <div class="dropdown dropdown-top dropdown-end">
-            <div tabIndex={0} role="button" class="btn btn-sm m-1 btn-primary">explore a subset</div>
+            <div tabIndex={0} role="button" class="btn btn-sm m-1 btn-primary">Explore a subset</div>
             <ul tabIndex={0} class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
               <li><button on:click={toggleDatasetWindow}>Subset 1</button></li>
               <li><button on:click={toggleDatasetWindow}>Subset 2</button></li>
@@ -80,11 +93,11 @@
           </div>
 
         <div class="dropdown dropdown-top">
-            <div tabIndex={0} role="button" class="btn btn-sm m-1 btn-primary">add to a subset</div>
+            <div tabIndex={0} role="button" class="btn btn-sm m-1 btn-primary">Add to a subset</div>
             <ul tabIndex={0} class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
                 <li><button>Subset 1</button></li>
                 <li><button>Subset 2</button></li>
-                <li><button>make a new subset</button></li>
+                <li><button>Make a new subset</button></li>
             </ul>
         </div>
     </div>
@@ -241,6 +254,11 @@ h3 {
 
 .dataset-content {
     margin-top: 20px;
+}
+
+.custom-tooltip::before {
+    font-size: 0.70rem; 
+    color: var(--heading-color);
 }
 
 </style>

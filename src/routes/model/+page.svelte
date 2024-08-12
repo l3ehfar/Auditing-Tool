@@ -33,7 +33,14 @@
             <div class="label-capture-container">
                 <div use:marcelle={label}></div>
                 <button bind:this={captureButton} class="btn btn-sm btn-primary">Upload to Dataset</button>
-                <button class="btn btn-sm btn-primary">Upload to Subset</button>
+                <!-- <div class="dropdown dropdown-top">
+                    <div tabIndex={0} role="button" class="btn btn-sm m-1 btn-primary w-full">Upload to Subset</div>
+                    <ul tabIndex={0} class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
+                        <li><button>Subset 1</button></li>
+                        <li><button>Subset 2</button></li>
+                        <li><button>make a new subset</button></li>
+                    </ul>
+                </div> -->
                 <button class="btn btn-sm btn-primary">Add to Comparing Tool</button>
             </div>
         </div>
@@ -72,6 +79,7 @@
         border-radius: 5px;
         color: var(--heading-color);
     }
+    
 
     .image-display {
         width: 200px;
@@ -105,4 +113,3 @@
     }
 
 </style>
-  

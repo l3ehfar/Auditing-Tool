@@ -1,14 +1,14 @@
-import { dashboard } from '@marcellejs/core';
-import { capture, input, label, trainingSetBrowser } from '.';
+// import { dashboard } from '@marcellejs/core';
+// import { capture, input, label, trainingSetBrowser } from '.';
 
-const dash = dashboard({
-  title: 'Marcelle Example - Dashboard',
-  author: 'Marcelle Pirates Crew',
-  closable: true,
-});
+// const dash = dashboard({
+//   title: 'Marcelle Example - Dashboard',
+//   author: 'Marcelle Pirates Crew',
+//   closable: true,
+// });
 
-dash.page('Data Management').sidebar(input).use([label, capture], trainingSetBrowser);
+// dash.page('Data Management').sidebar(input).use([label, capture], trainingSetBrowser);
 
-export function showDashboard() {
-  dash.show();
-}
+// export function showDashboard() {
+//   dash.show();
+// }

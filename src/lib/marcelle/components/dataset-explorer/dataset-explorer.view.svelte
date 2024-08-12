@@ -125,32 +125,35 @@
   }
 
   let initialId: ObjectId = null;
-  function selectInstance(id?: ObjectId) {
-    if (metaPressed) {
-      if (!id) return;
-      if (selected.get().includes(id)) {
-        selected.set(selected.get().filter((x) => x !== id));
-      } else {
-        selected.set(selected.get().concat([id]));
-      }
-    } else if (shiftPressed) {
-      if (!initialId || !id) return;
-      const srcLabel = getLabel(initialId);
-      const dstLabel = getLabel(id);
-      if (srcLabel !== dstLabel) return;
-      const instances = classes[srcLabel].instances.map((x) => x.id);
-      const srcIndex = instances.indexOf(initialId);
-      const dstIndex = instances.indexOf(id);
-      selected.set(
-        srcIndex < dstIndex
-          ? instances.slice(srcIndex, dstIndex + 1)
-          : instances.slice(dstIndex, srcIndex + 1),
-      );
+
+function selectInstance(id?: ObjectId) {
+  if (metaPressed) {
+    if (!id) return;
+    // Toggle selection if Meta/Control key is pressed
+    if (selected.get().includes(id)) {
+      selected.set(selected.get().filter((x) => x !== id));
     } else {
-      selected.set(id ? [id] : []);
-      initialId = id;
+      selected.set([...selected.get(), id]);
     }
+  } else if (shiftPressed) {
+    if (!initialId || !id) return;
+    const srcLabel = getLabel(initialId);
+    const dstLabel = getLabel(id);
+    if (srcLabel !== dstLabel) return;
+    const instances = classes[srcLabel].instances.map((x) => x.id);
+    const srcIndex = instances.indexOf(initialId);
+    const dstIndex = instances.indexOf(id);
+    const newSelection = instances.slice(
+      Math.min(srcIndex, dstIndex),
+      Math.max(srcIndex, dstIndex) + 1
+    );
+    selected.set([...new Set([...selected.get(), ...newSelection])]);
+  } else {
+    selected.set(id ? [id] : []);
+    initialId = id;
   }
+}
+
 
   function onClassAction(label: string, code: string) {
     let result: string;
@@ -256,9 +259,9 @@
 <ViewContainer {title} {loading}>
   {#if classes && !dataStoreError}
     {#if $count > 0}
-      <p class="ml-3 mt-2">This dataset contains {$count} instance{$count > 1 ? 's' : ''}.</p>
+      <h3 class="ml-3 mt-2">This dataset contains {$count} instance{$count > 1 ? 's' : ''}.</h3>
     {:else}
-      <p class="ml-3 mt-2">This dataset is empty.</p>
+      <h3 class="ml-3 mt-2">This dataset is empty.</h3>
     {/if}
 
     <div

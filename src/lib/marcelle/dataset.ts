@@ -20,6 +20,7 @@ export interface ImageInstance extends Instance {
   x: ImageData;
   y: string;
   thumbnail: string;
+  subset?: string; // optional subset identifier
 }
 
 // export const model = huggingfaceModel({task: 'image-to-text', inference: 'api', apiToken: ''});
@@ -91,4 +92,4 @@ $uploadedImage.subscribe((image) => {
   $imageStream.set(image);
 });
 
-export const ImageDisplay = imageDisplay($imageStream);
+export const ImageDisplay = imageDisplay($imageStream); 
