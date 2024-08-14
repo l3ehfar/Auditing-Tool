@@ -9,10 +9,9 @@ import {
   imageDisplay,
   Stream,
   text,
-  button
 } from '@marcellejs/core';
 import { datasetExplorer } from './components';
-// import { HuggingfaceModel } from './components';
+import { huggingfaceModel } from './components';
 
 const store = dataStore('localStorage');
 
@@ -23,20 +22,26 @@ export interface ImageInstance extends Instance {
   subset?: string; // optional subset identifier
 }
 
-// export const model = huggingfaceModel({task: 'image-to-text', inference: 'api', apiToken: ''});
+const HFmodel = huggingfaceModel({
+  task: 'image-to-text',
+  apiToken: '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', //input your huggingface token here
+  inference: 'api',
+});
 
-// input.$images.subscribe(async (img) => {
-//   if(typeof img !== 'undefined'){
-//       let res = await model.predict(img);
-//       caption.$value.set(JSON.stringify(res));
-//   }
-// });
-
-export const caption = text('caption provided by the model');
+export const caption = text('');
 export const input = imageUpload();
 export const label = textInput();
-// export const addToSubset = button('Upload to Subset');
-// export const compare = button('Add to Comparing Tool');
+
+input.$images.subscribe(async (img) => {
+  if (typeof img !== 'undefined') {
+    let res = await HFmodel.predict(img);
+    if (res && res.length > 0 && res[0].generated_text) {
+      caption.$value.set(res[0].generated_text);
+    } else {
+      caption.$value.set('No caption generated');
+    }
+  }
+});
 
 export let trainingSet = dataset<ImageInstance>('training-set-dashboard', store);
 export let datasetExplorerComponent = datasetExplorer(trainingSet);

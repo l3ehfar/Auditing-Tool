@@ -111,3 +111,7 @@ button:focus:not(:focus-visible) {
 .card p{
 	display: none !important;
 }
+
+.border-dashed{
+	border: none !important;
+}

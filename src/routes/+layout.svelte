@@ -4,6 +4,26 @@
   import './styles.css';
   import "tailwindcss/tailwind.css";
   import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
+  import { onMount } from 'svelte';
+  // import { OverlayScrollbars } from 'overlayscrollbars';
+  // import 'overlayscrollbars/styles/overlayscrollbars.css';
+
+  // onMount(() => {
+  //   // Select all elements with these classes
+  //   const elements = document.querySelectorAll('.overflow-y-auto, .scrollable');
+
+  //   // Convert NodeList to an array and initialize OverlayScrollbars for each element
+  //   elements.forEach(element => {
+  //     OverlayScrollbars(element as HTMLElement, {
+  //       className: 'os-theme-dark', // Use a predefined theme or your custom class
+  //       scrollbars: {
+  //         clickScroll: true, // Enable click scrolling
+  //         dragScroll: true,  // Enable drag scrolling
+  //         visibility: 'auto', // Show scrollbar only when needed
+  //       },
+  //     });
+  //   });
+  // });
 </script>
 
 <Header />
@@ -33,42 +53,18 @@
     display: flex;
     height: 100vh;
   }
+
   .fixed {
     flex: 1;
     background-color: oklch(var(--b2)); 
     position: relative;
+    overflow-y: auto; /* Ensure this section can scroll */
   }
+
   .routed {
-    background-color: oklch(var(--b1));
+    background-color: rgb(243, 244, 246);
     flex: 1;
+    overflow-y: auto; /* Ensure this section can scroll */
   }
 
-  /* main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 1rem;
-    width: 100%;
-    max-width: 1024px;
-    margin: 0 auto;
-    box-sizing: border-box;
-  } */
-
-  /* footer {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 40px;
-  }
-
-  footer a {
-    font-weight: bold;
-  }
-
-  @media (min-width: 480px) {
-    footer {
-      padding: 40px 0;
-    }
-  } */
 </style>
