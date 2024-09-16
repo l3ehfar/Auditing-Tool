@@ -258,11 +258,11 @@ function selectInstance(id?: ObjectId) {
 
 <ViewContainer {title} {loading}>
   {#if classes && !dataStoreError}
-    {#if $count > 0}
+    <!-- {#if $count > 0}
       <h3 class="ml-3 mt-2">This dataset contains {$count} instance{$count > 1 ? 's' : ''}.</h3>
     {:else}
       <h3 class="ml-3 mt-2">This dataset is empty.</h3>
-    {/if}
+    {/if} -->
 
     <div
       class="flex flex-wrap"

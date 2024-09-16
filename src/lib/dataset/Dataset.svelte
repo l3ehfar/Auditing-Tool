@@ -6,7 +6,7 @@
     import { zoomLevelStore } from '$lib/store';
     import { derived } from 'svelte/store';
 
-    let showDatasetWindow: boolean = false;
+    // let showDatasetWindow: boolean = false;
     let zoomLevel: number = 1;
 
     // Create a derived store to count the selected items
@@ -15,22 +15,22 @@
         ($selected) => $selected.length
     );
 
-    function toggleDatasetWindow(): void {
-        showDatasetWindow = !showDatasetWindow;
-    }
+    // function toggleDatasetWindow(): void {
+    //     showDatasetWindow = !showDatasetWindow;
+    // }
 
-    function handleClickOutside(event: MouseEvent): void {
-        const modalContent = document.querySelector('.dataset-window .window-content') as HTMLElement;
-        if (modalContent && !modalContent.contains(event.target as Node)) {
-            showDatasetWindow = false;
-        }
-    }
+    // function handleClickOutside(event: MouseEvent): void {
+    //     const modalContent = document.querySelector('.dataset-window .window-content') as HTMLElement;
+    //     if (modalContent && !modalContent.contains(event.target as Node)) {
+    //         showDatasetWindow = false;
+    //     }
+    // }
 
-    function handleKeyDown(event: KeyboardEvent): void {
-        if (event.key === 'Escape') {
-            showDatasetWindow = false;
-        }
-    }
+    // function handleKeyDown(event: KeyboardEvent): void {
+    //     if (event.key === 'Escape') {
+    //         showDatasetWindow = false;
+    //     }
+    // }
 
     function zoomIn(): void {
         if (zoomLevel < 2) {
@@ -47,43 +47,44 @@
     }
 </script>
 
-<h1 class="title">Dataset Browser</h1>
+<!-- <h1 class="title">Dataset Browser</h1> -->
 <div class="content">
     <div class="marcelle card">
-        <h3>Select a category</h3>
-        <div class="selector" use:marcelle={selectClass}></div>
         <div class="conf-row dataset-tools">
-            <button class="icon" on:click={zoomOut}>
-                <FontAwesomeIcon icon={faMagnifyingGlassMinus} />
-            </button>
-            <button class="icon" on:click={zoomIn}>
-                <FontAwesomeIcon icon={faMagnifyingGlassPlus} />
-            </button>
-            <div class="tooltip tooltip-left tooltip-secondary custom-tooltip" data-tip="Hold Ctrl (or Cmd on Mac) to select multiple images. Hold Shift to select all images between the first and last clicked.">
-                <div class="badge badge-outline">
-                    selected: {$selectedCount}
-                </div>
-            </div>
-            {#if $selectedCount > 0}
-                <button class="badge badge-error gap-2" on:click={() => datasetExplorerComponent.$selected.set([])}>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      class="inline-block h-4 w-4 stroke-current">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                    cancel selection
+            <div class="selector" use:marcelle={selectClass}></div>
+            <div class="right-tools">
+                <button class="icon" on:click={zoomOut}>
+                    <FontAwesomeIcon icon={faMagnifyingGlassMinus} />
                 </button>
-            {/if}
+                <button class="icon" on:click={zoomIn}>
+                    <FontAwesomeIcon icon={faMagnifyingGlassPlus} />
+                </button>
+                <!-- <div class="tooltip tooltip-left tooltip-secondary custom-tooltip" data-tip="Hold Ctrl (or Cmd on Mac) to select multiple images. Hold Shift to select all images between the first and last clicked.">
+                    <div class="badge badge-outline">
+                        selected: {$selectedCount}
+                    </div>
+                </div>
+                {#if $selectedCount > 0}
+                    <button class="badge badge-error gap-2" on:click={() => datasetExplorerComponent.$selected.set([])}>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          class="inline-block h-4 w-4 stroke-current">
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                        cancel selection
+                    </button>
+                {/if} -->
+            </div>
         </div>
         <div use:marcelle={datasetExplorerComponent} class="dataset" />
     </div>
-    <div class="conf-row btn-container">
+    <!-- <div class="conf-row btn-container">
         <div class="dropdown dropdown-top dropdown-end">
             <div tabIndex={0} role="button" class="btn btn-sm m-1 btn-primary">Explore Subsets</div>
             <ul tabIndex={0} class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
@@ -100,9 +101,9 @@
                 <li><button>Make a new subset</button></li>
             </ul>
         </div>
-    </div>
+    </div> -->
 </div>
-
+<!-- 
 {#if showDatasetWindow}
     <div class="dataset-window" on:click={handleClickOutside} on:keydown={handleKeyDown}>
         <div class="window-content">
@@ -124,11 +125,11 @@
                 </button>
             </div>
             <div class="dataset-content">
-                <!-- subset content  -->
+               
             </div>
         </div>
     </div>
-{/if}
+{/if} -->
 
 <style>
 :global(body) {
@@ -144,21 +145,19 @@
     width: 100%;
     max-width: var(--column-width);
     margin: 0 auto;
-    margin-top: 40px;
-    background-color: oklch(var(--b2));
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 40px);
+    height: 50vh;
 }
 
-.title {
+/* .title {
     position: absolute;
     top: 0;
     left: 0;
     font-size: 1rem;
     margin-left: 10px;
     margin-top: 10px;
-}
+} */
 
 .card {
     padding-top: 0;
@@ -172,12 +171,12 @@
     margin-top: 0;
 }
 
-.btn {
+/* .btn {
     margin: 2px;
     color: var(--heading-color);
     font-weight: normal;
-}
-
+} */
+/* 
 .badge {
     margin: 2px;
     padding-top: 10px;
@@ -190,13 +189,13 @@
 
 button.badge:hover {
     background-color: oklch(var(--b3));
-}
+} */
 
-h3 {
+/* h3 {
     color: var(--heading-color);
     margin-top: 5px;
     font-size: small;
-}
+} */
 
 .icon {
     font-size: larger;
@@ -206,11 +205,17 @@ h3 {
 
 .dataset-tools {
     display: flex;
-    justify-content: flex-end;
-    align-items: center;
+    justify-content: space-between; /* Ensures the left and right side split */
+    align-items: center; /* Vertically center the items */
     padding-top: 10px;
     margin-bottom: 4px;
 }
+
+.right-tools {
+    display: flex; /* Align elements in a row */
+    align-items: center;
+}
+
 
 .dataset {
     flex-grow: 1;
@@ -218,7 +223,7 @@ h3 {
     max-height: calc(100% - 50px); 
 }
 
-.conf-row.btn-container {
+/* .conf-row.btn-container {
     display: flex;
     justify-content: center;
     align-items: flex-end;
@@ -255,11 +260,11 @@ h3 {
 
 .dataset-content {
     margin-top: 20px;
-}
+} */
 
-.custom-tooltip::before {
+/* .custom-tooltip::before {
     font-size: 0.70rem; 
     color: var(--heading-color);
-}
+} */
 
 </style>
