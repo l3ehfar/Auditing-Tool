@@ -1,17 +1,15 @@
 <script lang="ts">
-    import { ImageDisplay, caption, bindButtonEvents } from "$lib/marcelle";
+    import { ImageDisplay, caption, $imageStream as imageStream, generateCaption } from "$lib/marcelle";
     import { marcelle } from "$lib/utils";
-    import { onMount, onDestroy } from 'svelte';
-    import { comparisonTool } from "$lib/marcelle/components";
+    import { onMount, onDestroy, tick } from 'svelte';
     import * as fabric from 'fabric';
+    import { faPencilAlt } from '@fortawesome/free-solid-svg-icons';
 
-    let addToComparisonButton: HTMLButtonElement | null = null;
-    let comparisonToolComponent = new comparisonTool();
     let cleanup: () => void;
-
     let canvas: fabric.Canvas | null = null;
     let isDrawingMode = false;
-    let canvasHistory: any[] = []; 
+    let canvasHistory: any[] = [];
+    let imageObject: fabric.Image | null = null;  
 
     function toggleDrawingMode() {
         if (canvas) {
@@ -28,21 +26,86 @@
         }
     }
 
-    function undoLastAction() {
-        if (canvas && canvas.getObjects().length > 0) {
-            const lastObject = canvas.getObjects().pop();
-            canvas.remove(lastObject);
-            canvasHistory.pop(); 
+    function getCanvasImage(): ImageData | null {
+        const canvasEl = document.querySelector('#fabric-canvas') as HTMLCanvasElement;
+        const ctx = canvasEl?.getContext('2d');
+        if (ctx) {
+            return ctx.getImageData(0, 0, canvasEl.width, canvasEl.height);
+        }
+        return null;
+    }
+
+    function generateCaptionForCombinedImage() {
+        const combinedImage = getCanvasImage(); // Get the combined image (selected + drawing)
+        if (combinedImage) {
+            generateCaption(combinedImage);  // Generate caption using the combined image
+        } else {
+            console.error('Failed to capture canvas image');
         }
     }
 
-    onMount(() => {
-        const canvasEl = document.getElementById('fabric-canvas') as HTMLCanvasElement;
-        if (!canvasEl) return;
 
-        const container = document.querySelector('.image-display') as HTMLDivElement;
-        const width = container.clientWidth;
-        const height = container.clientHeight;
+
+    function undoLastAction() {
+        if (canvas && canvas.getObjects().length > 1) {  
+            const lastObject = canvas.getObjects().pop();
+            if (lastObject !== imageObject) {  // Do not remove the image object
+                canvas.remove(lastObject);
+                canvasHistory.pop();
+            } else {
+                canvas.getObjects().push(lastObject);  
+            }
+        }
+    }
+
+    function loadImageToCanvas(img: ImageData) {
+        if (canvas) {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = img.width;
+            tempCanvas.height = img.height;
+
+            const ctx = tempCanvas.getContext('2d');
+            if (ctx) {
+                ctx.putImageData(img, 0, 0);
+
+                const imgElement = new Image();
+                imgElement.src = tempCanvas.toDataURL();  
+
+                imgElement.onload = function () {
+                    if (canvas) {
+                        // Remove the previous image object if exists
+                        if (imageObject) {
+                            canvas.remove(imageObject);
+                        }
+
+                        // Create a new fabric image object
+                        imageObject = new fabric.Image(imgElement, {
+                            left: 0,
+                            top: 0,
+                            selectable: false, 
+                            evented: false,  
+                        });
+
+                        // Clear all objects from the canvas and re-add the image first
+                        const objects = canvas.getObjects().filter(obj => obj !== imageObject);
+                        canvas.clear();
+                        canvas.add(imageObject);
+                        objects.forEach(obj => canvas.add(obj));
+                        canvas.renderAll();
+                    }
+                };
+            }
+        }
+    }
+
+
+
+    onMount(async () => {
+        await tick();
+        const canvasEl = document.querySelector('#fabric-canvas') as HTMLCanvasElement;
+        
+        const width = 200;
+        const height = 200;
 
         canvas = new fabric.Canvas(canvasEl, {
             isDrawingMode: false,
@@ -56,10 +119,9 @@
             }
         });
 
-        if (addToComparisonButton) {
-            cleanup = bindButtonEvents(addToComparisonButton, comparisonToolComponent);
-        }
-        comparisonToolComponent.mount(document.getElementById('comparison-tool-container'));
+        imageStream.filter(img => !!img).subscribe((img) => {
+            loadImageToCanvas(img);  
+        });
     });
 
     onDestroy(() => {
@@ -70,10 +132,8 @@
 <div class="marcelle card">
     <div class="conf-row">
         <div class="group-components-container">
-            <div class="marcelle-component image-display" use:marcelle={ImageDisplay}>
-                <div class="canvas-container">
-                    <canvas id="fabric-canvas"></canvas>
-                </div>
+            <div class="canvas-container">
+                <canvas id="fabric-canvas" width="200" height="200"></canvas>
             </div>
             <div class="marcelle-component caption" use:marcelle={caption}></div>
         </div>
@@ -82,20 +142,15 @@
                 class="btn btn-sm w-full {isDrawingMode ? 'btn-active btn-primary' : 'btn-primary'}" 
                 on:click={toggleDrawingMode}
             >
-                Manipulate Image
+            <i class="{isDrawingMode ? 'fas fa-pencil-alt' : 'fas fa-mouse'}"></i> 
             </button>
             <button class="btn btn-sm btn-base-200 w-full" on:click={undoLastAction}>
                 Undo
             </button>
-            <button class="btn btn-sm btn-primary w-full">Generate Caption</button>
-        </div>
-        <div class="group-components-container-tool">
-            <button bind:this={addToComparisonButton} class="btn btn-sm btn-primary w-full">Add To Comparison Tool</button>
-            <div id="comparison-tool-container"></div>
+            <button class="btn btn-sm btn-primary w-full" on:click={generateCaptionForCombinedImage}>Generate Caption</button>
         </div>
     </div>
 </div>
-
 
 <style>
 .marcelle.card {
@@ -103,6 +158,8 @@
     flex-direction: column;
     height: 100%;
     box-sizing: border-box;
+    width: 100%;
+    align-items: center;
 }
 
 .btn {
@@ -147,9 +204,6 @@
 }
 
 .canvas-container {
-    position: absolute;
-    top: 0;
-    left: 0;
     width: 100%;
     height: 100%;
 }
@@ -177,5 +231,4 @@ canvas {
     max-width: 100px;
     align-items: center;
 }
-
 </style>

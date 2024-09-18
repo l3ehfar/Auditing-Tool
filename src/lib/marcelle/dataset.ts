@@ -34,7 +34,7 @@ export const input = imageUpload();
 export const label = textInput(); 
 
 // Function to generate caption using Hugging Face model
-async function generateCaption(image: ImageData) {
+export async function generateCaption(image: ImageData) {
   try {
     const res = await HFmodel.predict(image);
     if (res && res.length > 0 && res[0].generated_text) {
@@ -115,7 +115,7 @@ const $selectedImage = datasetExplorerComponent.$selected
   });
 
 // Stream to handle both uploaded and selected images
-const $imageStream = new Stream<ImageData>();
+export const $imageStream = new Stream<ImageData>();
 
 // Subscribe to the selected image and generate a caption
 $selectedImage.subscribe((instance) => {
@@ -157,7 +157,6 @@ export function addSelectedToComparison(comparisonToolComponent) {
   }
 }
 
-// Bind comparison button to the respective actions
 export function bindButtonEvents(addToComparisonButton: HTMLButtonElement, comparisonToolComponent) {
 
   addToComparisonButton.addEventListener('click', () => {
@@ -168,3 +167,4 @@ export function bindButtonEvents(addToComparisonButton: HTMLButtonElement, compa
     addToComparisonButton.removeEventListener('click', () => addSelectedToComparison(comparisonToolComponent));
   };
 }
+
