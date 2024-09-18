@@ -3,27 +3,44 @@
     import { marcelle } from "$lib/utils";
     import { onMount, onDestroy, tick } from 'svelte';
     import * as fabric from 'fabric';
-    import { faPencilAlt } from '@fortawesome/free-solid-svg-icons';
+    
+    import { faPencilAlt, faMouse, faMousePointer, faRotateLeft } from '@fortawesome/free-solid-svg-icons';
+    import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
 
     let cleanup: () => void;
     let canvas: fabric.Canvas | null = null;
     let isDrawingMode = false;
     let canvasHistory: any[] = [];
-    let imageObject: fabric.Image | null = null;  
+    let imageObject: fabric.Image | null = null;
+    
+    let brushSize = 12; 
+    let brushColor = "#000000"; 
 
     function toggleDrawingMode() {
+        isDrawingMode = !isDrawingMode;
         if (canvas) {
-            isDrawingMode = !isDrawingMode;
             canvas.isDrawingMode = isDrawingMode;
 
             if (canvas.isDrawingMode) {
                 if (!canvas.freeDrawingBrush) {
                     canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
                 }
-                canvas.freeDrawingBrush.width = 12;
-                canvas.freeDrawingBrush.color = "#ff0000";
+                updateBrushSettings(); // Update brush settings when toggling
             }
         }
+    }
+
+    function updateBrushSettings() {
+        if (canvas && canvas.freeDrawingBrush) {
+            canvas.freeDrawingBrush.width = brushSize;
+            canvas.freeDrawingBrush.color = brushColor;
+        }
+    }
+
+   
+    function changeBrushColor(color: string) {
+        brushColor = color;
+        updateBrushSettings(); 
     }
 
     function getCanvasImage(): ImageData | null {
@@ -36,20 +53,18 @@
     }
 
     function generateCaptionForCombinedImage() {
-        const combinedImage = getCanvasImage(); // Get the combined image (selected + drawing)
+        const combinedImage = getCanvasImage(); 
         if (combinedImage) {
-            generateCaption(combinedImage);  // Generate caption using the combined image
+            generateCaption(combinedImage); 
         } else {
             console.error('Failed to capture canvas image');
         }
     }
 
-
-
     function undoLastAction() {
         if (canvas && canvas.getObjects().length > 1) {  
             const lastObject = canvas.getObjects().pop();
-            if (lastObject !== imageObject) {  // Do not remove the image object
+            if (lastObject !== imageObject) {  
                 canvas.remove(lastObject);
                 canvasHistory.pop();
             } else {
@@ -73,12 +88,10 @@
 
                 imgElement.onload = function () {
                     if (canvas) {
-                        // Remove the previous image object if exists
                         if (imageObject) {
                             canvas.remove(imageObject);
                         }
 
-                        // Create a new fabric image object
                         imageObject = new fabric.Image(imgElement, {
                             left: 0,
                             top: 0,
@@ -86,7 +99,6 @@
                             evented: false,  
                         });
 
-                        // Clear all objects from the canvas and re-add the image first
                         const objects = canvas.getObjects().filter(obj => obj !== imageObject);
                         canvas.clear();
                         canvas.add(imageObject);
@@ -97,8 +109,6 @@
             }
         }
     }
-
-
 
     onMount(async () => {
         await tick();
@@ -139,15 +149,59 @@
         </div>
         <div class="group-components-container-small">
             <button 
-                class="btn btn-sm w-full {isDrawingMode ? 'btn-active btn-primary' : 'btn-primary'}" 
+                class="btn btn-sm w-full {isDrawingMode ? 'btn-active btn-secondary' : 'btn-secondary'}" 
                 on:click={toggleDrawingMode}
             >
-            <i class="{isDrawingMode ? 'fas fa-pencil-alt' : 'fas fa-mouse'}"></i> 
+                {#if isDrawingMode}
+                    <FontAwesomeIcon icon={faMousePointer} />
+                {:else}
+                    <FontAwesomeIcon icon={faPencilAlt} />
+                {/if}
             </button>
-            <button class="btn btn-sm btn-base-200 w-full" on:click={undoLastAction}>
-                Undo
+
+            {#if isDrawingMode}
+                <div class="brush-settings">
+               
+                    <label for="brush-size" class="text-xs">Brush Size: {brushSize}px</label>
+                    <input
+                        id="brush-size"
+                        type="range"
+                        min="1"
+                        max="50"
+                        bind:value={brushSize}
+                        on:input={updateBrushSettings}
+                        class="range range-primary"
+                    />
+
+                    <div class="color-palette">
+                        <button
+                            class="btn btn-xs btn-circle"
+                            style="background-color: #ff0000;"
+                            on:click={() => changeBrushColor('#ff0000')}
+                        >
+                        </button>
+                        <button
+                            class="btn btn-xs btn-circle"
+                            style="background-color: #ffffff; border: 1px solid #ddd;"
+                            on:click={() => changeBrushColor('#ffffff')}
+                        >
+                        </button>
+                        <button
+                            class="btn btn-xs btn-circle"
+                            style="background-color: #000000;"
+                            on:click={() => changeBrushColor('#000000')}
+                        >
+                        </button>
+                    </div>
+                </div>
+            {/if}
+
+            <button class="btn btn-sm w-full" on:click={undoLastAction}>
+                <FontAwesomeIcon icon={faRotateLeft}/>
             </button>
-            <button class="btn btn-sm btn-primary w-full" on:click={generateCaptionForCombinedImage}>Generate Caption</button>
+            <button class="btn btn-sm btn-secondary w-full" on:click={generateCaptionForCombinedImage}>
+                Generate Caption
+            </button>
         </div>
     </div>
 </div>
@@ -230,5 +284,28 @@ canvas {
     gap: 5px;
     max-width: 100px;
     align-items: center;
+}
+
+.brush-settings {
+    margin-top: 10px;
+    width: 100%;
+    text-align: center;
+}
+
+.color-palette {
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.color-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
+    outline: none;
 }
 </style>
