@@ -1,29 +1,41 @@
 <script lang="ts">
   import Dataset from '$lib/dataset/Dataset.svelte';
+  import AffinityDiagram from '$lib/affinityDiagram/AffinityDiagram.svelte';
   import './styles.css';
   import "tailwindcss/tailwind.css";
 </script>
 
-<div class="container">
-  <div class="fixed">
-    <Dataset />
+<div class="layout-container">
+  <div class="top-section">
+    <div class="fixed">
+      <Dataset />
+    </div>
+    <div class="routed">
+      <slot />
+    </div>
   </div>
-  <div class="routed">
-    <slot />
+  <div class="bottom-section">
+    <AffinityDiagram />
   </div>
 </div>
 
 <style>
-  .container {
+  .layout-container {
     display: flex;
+    flex-direction: column;
     height: 100vh;
-    background-color: oklch(var(--b2)); 
+  }
+
+  .top-section {
+    flex: 1; 
+    display: flex;
+    background-color: oklch(var(--b2));
   }
 
   .fixed {
     flex: 1;
     position: relative;
-    overflow-y: auto; 
+    overflow-y: auto;
   }
 
   .routed {
@@ -33,8 +45,19 @@
     align-items: center;
     height: 50vh;
     max-width: 50vw;
-    overflow: hidden; /* Prevent scrolling */
+    overflow: hidden;
     padding-top: 8px;
     padding-bottom: 8px;
+  }
+
+  .bottom-section {
+    flex: 1; 
+    background-color: oklch(var(--b2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-right: 5px;
+    padding-left: 5px;
+    padding-bottom: 5px;
   }
 </style>
