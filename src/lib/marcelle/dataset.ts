@@ -14,7 +14,8 @@ import {
 import { datasetExplorer } from './components';
 import { huggingfaceModel } from './components';
 
-const store = dataStore('localStorage');
+// const store = dataStore('localStorage');
+const store = dataStore('http://localhost:3030');
 
 export interface ImageInstance extends Instance {
   x: ImageData;

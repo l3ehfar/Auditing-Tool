@@ -4,7 +4,7 @@
     import { writable, get } from 'svelte/store';
     import { faMousePointer, faObjectGroup } from '@fortawesome/free-solid-svg-icons';
     import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
-  
+
     let affinityDiagramArea;
     let isSelectionMode = writable(false);
     let isSelecting = false;
@@ -12,7 +12,7 @@
     let selectionBox = writable({ x: 0, y: 0, width: 0, height: 0 });
     let selectedItems = writable([]);
     let rectangles = writable([]);
-  
+
     let nextId = 1;
   
     let isDragging = false;
@@ -310,7 +310,6 @@
       });
     }
   
-    // Function to attach text to a rectangle
     function attachTextToRectangle(rectangleId) {
       const userText = prompt("Enter your hypothesis:");
       if (userText) {
@@ -366,7 +365,7 @@
           <span class="rect-info">Instances: {rectangle.items.length}</span>
   
           <button
-            class="btn btn-info btn-xs btn-circle absolute bottom-1 left-1"
+            class="attach-text-button absolute bottom-1 left-1"
             on:click={() => attachTextToRectangle(rectangle.id)}
           >
             Attach Hypothesis
@@ -551,5 +550,22 @@
     .selected {
       border: 2px solid blue;
     }
+
+    .attach-text-button {
+      background-color: #007bff;
+      color: white;
+      border-radius: 10px;
+      padding: 5px 10px;
+      border: none;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      font-size: 0.75rem;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+  .attach-text-button:hover {
+    background-color: #0056b3;
+    transform: scale(1.05);
+  }
+
   </style>
   
