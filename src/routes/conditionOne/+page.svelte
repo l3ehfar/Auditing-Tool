@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { ImageDisplay, caption, $imageStream as imageStream, generateCaption } from "$lib/marcelle";
+    import { ImageDisplay, caption, $imageStream as imageStream, generateCaption, input, label } from "$lib/marcelle";  
     import { marcelle } from "$lib/utils";
     import { onMount, onDestroy, tick } from 'svelte';
     import * as fabric from 'fabric';
@@ -117,8 +117,8 @@
     <div class="conf-row">
         <div class="group-components-container instax-style" draggable="true" on:dragstart={onDragStart}>
             <div class="canvas-container">
+
                 <canvas id="fabric-canvas" width="200" height="200"></canvas>
-                <!-- Transparent overlay to capture drag events -->
                 <div id="drag-overlay" class="drag-overlay"></div>
             </div>
             <div class="marcelle-component caption" use:marcelle={caption}></div>
@@ -234,7 +234,4 @@
 
 
 
-           <!-- <div use:marcelle={input}></div>
-            <div use:marcelle={label}></div>
-            <button bind:this={captureButton} class="btn btn-sm btn-primary w-full">Upload to Dataset</button> -->
-      
+          
