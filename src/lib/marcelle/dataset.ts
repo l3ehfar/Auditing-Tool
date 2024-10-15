@@ -16,6 +16,7 @@ import { huggingfaceModel } from './components';
 
 const store = dataStore('http://localhost:3030');
 
+
 export interface ImageInstance extends Instance {
   x: ImageData;
   y: string;
@@ -79,7 +80,7 @@ export async function handleCapture() {
   const thumbnailData = input.$thumbnails.get();
 
   if (imageData && labelValue) {
-    let instanceCaption = caption.$value.get(); 
+    let instanceCaption = caption.$value.get();
 
     if (!instanceCaption || instanceCaption === 'No caption generated') {
       instanceCaption = await generateCaption(imageData);
@@ -91,25 +92,28 @@ export async function handleCapture() {
         message: 'No valid caption was generated for the uploaded image.',
         duration: 5000,
       });
-      return; 
+      return;
     }
 
     const instance: ImageInstance = {
       x: imageData,
       y: labelValue,
       thumbnail: thumbnailData,
-      caption: instanceCaption, 
+      caption: instanceCaption,
     };
 
+
     const createdInstance = await trainingSet.create(instance);
-    if (createdInstance && createdInstance._id) {
+
+    // Check for both `id` and `_id`
+    if (createdInstance && (createdInstance._id || createdInstance.id)) {
       notification({
         title: 'Upload Successful',
         message: `The item was successfully uploaded with the caption: "${instanceCaption}"`,
         duration: 5000,
       });
     } else {
-      console.error('Instance creation failed or no _id assigned.');
+      console.error('Instance creation failed or no `_id` or `id` assigned.');
     }
   } else {
     notification({
@@ -119,6 +123,7 @@ export async function handleCapture() {
     });
   }
 }
+
 
 let selectedImageInstance: ImageInstance | null = null;
 

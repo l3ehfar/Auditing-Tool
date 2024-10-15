@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { caption, $imageStream as imageStream } from "$lib/marcelle";  
+    import { caption, $imageStream as imageStream, trainingSet } from "$lib/marcelle";  
     import { onMount, onDestroy, tick } from 'svelte';
-    import { marcelle } from "$lib/utils";
     import * as fabric from 'fabric';
     import Chart from 'chart.js/auto';
+    import { marcelle } from "$lib/utils";
     import { MatrixController, MatrixElement } from 'chartjs-chart-matrix';
 
     Chart.register(MatrixController, MatrixElement);
@@ -15,11 +15,8 @@
     let aggregatedPersonFrequency = { male: 0, female: 0, chef: 0 };
     let processedCaptions = new Set<string>(); 
     let nonGenderedWordFrequency = {}; 
-    let coOccurrences = { male: {}, female: {}, chef: {} }; // Track co-occurrences between gendered and non-gendered words
-    let captionInstances = { male: {}, female: {}, chef: {} }; // Track captions for each co-occurrence
-
-    let showModal = false; 
-    let modalContent = [];  // Store caption instances for display in modal
+    let coOccurrences = { male: {}, female: {}, chef: {} }; 
+    let captionInstances = { male: {}, female: {}, chef: {} };
 
     const stopWords = ['in', 'into', 'of', 'other', 'with', 'is', 'are', 'arafed', 'araffe', 'and', 'model', 'generated', 'caption:', 'a', 'to', 'one', 'two', 'three'];
 
@@ -70,93 +67,15 @@
                         captionInstances[category][word] = []; 
                     }
                     coOccurrences[category][word] += 1;
-                    captionInstances[category][word].push(captionText); // Store the caption for this co-occurrence
+                    captionInstances[category][word].push(captionText); 
                 });
             }
         });
-
-        updateMatrixChart();
     }
-
-    onMount(() => {
-        const matrixCtx = document.getElementById('matrixChart').getContext('2d');
-        matrixChart = new Chart(matrixCtx, {
-            type: 'matrix',
-            data: {
-                datasets: [{
-                    label: 'Word Frequency Matrix of Captions',
-                    data: generateMatrixData(),
-                    backgroundColor(context) {
-                        const value = context.raw ? context.raw.v : 0;
-                        return value > 0 ? `rgba(54, 162, 235, ${Math.min(1, value / 5)})` : 'rgba(0, 0, 0, 0.1)';
-                    },
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1,
-                    width(context) {
-                        const chart = context.chart;
-                        const xAxis = chart.scales.x;
-                        return (xAxis.width / xAxis.ticks.length) - 2;
-                    },
-                    height(context) {
-                        const chart = context.chart;
-                        const yAxis = chart.scales.y;
-                        return (yAxis.height / yAxis.ticks.length) - 2;
-                    }
-                }]
-            },
-            options: {
-                scales: {
-                    x: {
-                        type: 'category',
-                        labels: getMostFrequentNonGenderedWords(10),
-                        offset: true,
-                        title: {
-                            display: true,
-                            text: 'Frequent Words'
-                        }
-                    },
-                    y: {
-                        type: 'category',
-                        labels: ['male', 'female', 'chef'],
-                        offset: true,
-                        title: {
-                            display: true,
-                            text: 'Person Identifiers'
-                        }
-                    }
-                },
-                onClick(_, elements) {
-                    if (elements.length > 0) {
-                        const element = elements[0];
-                        console.log('Clicked element:', element);
-                        const { x, y } = element.element.$context.raw;
-                        showCaptionInstances(x, y);
-                    }
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            title() {
-                                return '';
-                            },
-                            label(context) {
-                                const { x, y, v } = context.raw || {};
-                                const instances = captionInstances[y][x] || [];
-                                return [
-                                    `Frequent Word: ${x}`,
-                                    `Identified Person: ${y}`,
-                                    `Count: ${v || 0}`,
-                                ];
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    });
 
     function updateMatrixChart() {
         const mostFrequentNonGenderedWords = getMostFrequentNonGenderedWords(10);
+
         matrixChart.data.datasets[0].data = generateMatrixData();
         matrixChart.options.scales.x.labels = mostFrequentNonGenderedWords;
         matrixChart.update();
@@ -191,20 +110,98 @@
         return sortedWords;
     }
 
-    function showCaptionInstances(word: string, category: string) {
-        const instances = captionInstances[category][word] || [];
-        console.log('Instances:', instances); 
-        modalContent = instances.map(instance => ({ word, category, instance }));
-        showModal = true; 
-        console.log(showModal);
-    }
+    async function fetchAndProcessCaptions() {
+        try {
+            const allInstances = await trainingSet.sift({});
 
-    function closeModal() {
-        showModal = false;
+            if (allInstances.length > 0) {
+                allInstances.forEach(instance => {
+                    if (instance.caption) {
+                        updateAggregatedPersonFrequency(instance.caption);  
+                    }
+                });
+
+                updateMatrixChart();
+            } else {
+                console.warn("Dataset is empty.");
+            }
+        } catch (error) {
+            console.error('Error fetching dataset instances:', error);
+        }
     }
 
     onMount(async () => {
+        const matrixCtx = document.getElementById('matrixChart').getContext('2d');
+        matrixChart = new Chart(matrixCtx, {
+            type: 'matrix',
+            data: {
+                datasets: [{
+                    label: 'Word Frequency Matrix of Captions',
+                    data: [], 
+                    backgroundColor(context) {
+                        const value = context.raw ? context.raw.v : 0;
+                        return value > 0 ? `rgba(54, 162, 235, ${Math.min(1, value / 5)})` : 'rgba(0, 0, 0, 0.1)';
+                    },
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1,
+                    width(context) {
+                        const chart = context.chart;
+                        const xAxis = chart.scales.x;
+                        return (xAxis.width / xAxis.ticks.length) - 2;
+                    },
+                    height(context) {
+                        const chart = context.chart;
+                        const yAxis = chart.scales.y;
+                        return (yAxis.height / yAxis.ticks.length) - 2;
+                    }
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        type: 'category',
+                        labels: getMostFrequentNonGenderedWords(10), 
+                        offset: true,
+                        title: {
+                            display: true,
+                            text: 'Frequent Words'
+                        }
+                    },
+                    y: {
+                        type: 'category',
+                        labels: ['male', 'female', 'chef'],
+                        offset: true,
+                        title: {
+                            display: true,
+                            text: 'Person Identifiers'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            title() {
+                                return '';
+                            },
+                            label(context) {
+                                const { x, y, v } = context.raw || {};
+                                const instances = captionInstances[y][x] || [];
+                                return [
+                                    `Frequent Word: ${x}`,
+                                    `Identified Person: ${y}`,
+                                    `Count: ${v || 0}`,
+                                ];
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        await fetchAndProcessCaptions();
+
         await tick();
+
         const canvasEl = document.querySelector('#fabric-canvas') as HTMLCanvasElement;
         const width = 200;
         const height = 200;
@@ -228,6 +225,7 @@
         caption.$value.subscribe((captionText) => {
             if (captionText) {
                 updateAggregatedPersonFrequency(captionText);
+                updateMatrixChart(); 
             }
         });
     });
@@ -293,6 +291,7 @@
     }
 </script>
 
+
 <div class="marcelle card">
     <div class="conf-row">
         <div class="group-components-container instax-style" draggable="true" on:dragstart={onDragStart}>
@@ -308,23 +307,6 @@
     </div>
 </div>
 
-
-{#if showModal}
-<!-- <div class="modal"> -->
-    <div class="modal-content">
-         <span class="close-button" on:click={closeModal}>&times;</span>
-         <div class="instax-grid"> 
-            <p>hellloooo</p>
-            {#each modalContent as { word, category, instance }}
-                <div class="small-instax-style">
-                    <p><strong>{category}:</strong> {word}</p>
-                    <p>{instance}</p>
-                </div>
-            {/each}
-        </div>
-    </div>
-<!-- </div> -->
-{/if}
 
 <style>
     .marcelle.card {
@@ -409,60 +391,5 @@
         align-items: center;
         justify-content: flex-start;
     }
-
-    .small-instax-style {
-        background-color: #fff;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 5px;
-        margin-bottom: 10px;
-        box-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
-        width: 150px;
-        height: 180px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
-        font-size: 0.7rem;
-    }
-
-    .modal {
-        position: fixed;            /* Fix the modal to the viewport */
-        top: 0;                     /* Start from the top of the viewport */
-        left: 0;                    /* Start from the left of the viewport */
-        width: 100vw;               /* Take the full width of the screen */
-        height: 100vh;              /* Take the full height of the screen */
-        background: rgba(0, 0, 0, 0.7);  /* Add a semi-transparent background overlay */
-        display: flex;              /* Use flexbox for centering */
-        justify-content: center;    /* Center horizontally */
-        align-items: center;        /* Center vertically */
-        z-index: 9999;              /* Ensure it's on top of everything */
-    }
-
-
-    .modal-content {
-        background: white;
-        padding: 20px;
-        border-radius: 10px;
-        width: 600px;
-        height: 400px; 
-        max-height: 80%;
-        overflow-y: auto;
-        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
-        border: 2px solid red; /* to debug */
-    }
-
-    .close-button {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        font-size: 1.5rem;
-        cursor: pointer;
-    }
-
-    .instax-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 10px;
-    }
+    
 </style>
