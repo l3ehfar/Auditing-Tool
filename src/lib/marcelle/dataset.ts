@@ -13,9 +13,25 @@ import {
 } from '@marcellejs/core';
 import { datasetExplorer } from './components';
 import { huggingfaceModel } from './components';
+import { writable } from 'svelte/store';
 
 const store = dataStore('http://localhost:3030');
 
+export let dynamicClassLabel = writable('all');
+// Allow any string key for aggregatedPersonFrequency
+export let aggregatedPersonFrequency: { [key: string]: number } = { male: 0, female: 0, classLabel: 0 };
+
+// Allow any string key for coOccurrences
+export let coOccurrences: { [key: string]: { [word: string]: number } } = { male: {}, female: {}, classLabel: {} };
+
+// Allow any string key for captionInstances
+export let captionInstances: { [key: string]: { [word: string]: any[] } } = { male: {}, female: {}, classLabel: {} };
+
+export const genderedWords = {
+  male: ['man', 'he', 'him', 'his', 'boy', 'male', 'men'],
+  female: ['woman', 'she', 'her', 'hers', 'girl', 'female', 'women'],
+  classLabel: [], 
+};
 
 export interface ImageInstance extends Instance {
   x: ImageData;
@@ -64,15 +80,52 @@ input.$images.subscribe((img) => {
 });
 
 export let trainingSet = dataset<ImageInstance>('training-set-dashboard', store);
+export let fullTrainingSet = dataset<ImageInstance>('training-set-dashboard', store);
 export let datasetExplorerComponent = datasetExplorer(trainingSet);
 
-export const selectClass = select(['all', 'chef', 'police'], 'all');
+// export const selectClass = select(['all', 'chef', 'police'], 'all');
 
-selectClass.$value.subscribe((label) => {
-  const newQuery = label === 'all' ? {} : { y: label };
+// selectClass.$value.subscribe((label) => {
+//   const newQuery = label === 'all' ? {} : { y: label };
+//   if (JSON.stringify(newQuery) === JSON.stringify(trainingSet.query)) return;
+//   trainingSet.sift(newQuery);
+//   fullTrainingSet.sift(newQuery);
+// });
+
+export const $currentClasses = new Stream<string[]>([], true);
+fullTrainingSet.$changes
+  .filter((x) => x.length > 0)
+  .map(() => trainingSet.distinct('y'))
+  .awaitPromises()
+  .subscribe((x) => {
+    $currentClasses.set(x);
+  });
+
+export const selectClass = select(['all']);
+$currentClasses.subscribe((c) => selectClass.$options.set(['all', ...c]));
+
+selectClass.title = 'Choose a Class:';
+selectClass.$value.subscribe((label: string) => {
+  const newQuery = label === 'all' ? {} : { y: label };  // If 'all' is selected, fetch all classes; otherwise, filter by the selected class.
+
   if (JSON.stringify(newQuery) === JSON.stringify(trainingSet.query)) return;
-  trainingSet.sift(newQuery);
+
+  // Update dynamicClassLabel when a new label is selected
+  if (label === 'all') {
+      dynamicClassLabel.set('all');  // When 'all' is selected
+  } else {
+      dynamicClassLabel.set(label);  // Set the selected class label dynamically
+  }
+
+  // Reset the co-occurrences and frequency data when a new class label is selected
+  aggregatedPersonFrequency.classLabel = 0;  // Reset frequency count for class label
+  coOccurrences.classLabel = {};  // Clear co-occurrences for the class label
+  captionInstances.classLabel = {};  // Clear caption instances for the class label
+
+  trainingSet.sift(newQuery);  // Query the dataset based on the selected label
 });
+
+
 
 export async function handleCapture() {
   const labelValue = label.$value.get();

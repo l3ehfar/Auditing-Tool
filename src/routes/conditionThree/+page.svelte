@@ -1,222 +1,240 @@
 <script lang="ts">
-    import { caption, $imageStream as imageStream } from "$lib/marcelle";  
+    import { caption, $imageStream as imageStream, trainingSet, aggregatedPersonFrequency, coOccurrences, captionInstances, genderedWords, dynamicClassLabel } from "$lib/marcelle";  
     import { onMount, onDestroy, tick } from 'svelte';
-    import { marcelle } from "$lib/utils";
     import * as fabric from 'fabric';
     import Chart from 'chart.js/auto';
+    import { marcelle } from "$lib/utils";
     import { MatrixController, MatrixElement } from 'chartjs-chart-matrix';
 
     Chart.register(MatrixController, MatrixElement);
-
     let canvas: fabric.Canvas | null = null;
     let imageObject: fabric.Image | null = null;
     let dragOverlay: HTMLDivElement | null = null;
 
-    let aggregatedPersonFrequency = { male: 0, female: 0, chef: 0 };
     let processedCaptions = new Set<string>(); 
     let nonGenderedWordFrequency = {}; 
-    let coOccurrences = { male: {}, female: {}, chef: {} }; // Track co-occurrences between gendered and non-gendered words
-    let captionInstances = { male: {}, female: {}, chef: {} }; // Track captions for each co-occurrence
+    let matrixChart = null;  
 
-    let showModal = false; 
-    let modalContent = [];  // Store caption instances for display in modal
+    const stopWords = ['in', 'into', 'of', 'other', 'with', 'is', 'are', 'arafed', 'araffe', 'and', 'model', 'generated', 'caption:', 'a', 'to', 'one', 'two', 'three', 'on'];
 
-    const stopWords = ['in', 'into', 'of', 'other', 'with', 'is', 'are', 'arafed', 'araffe', 'and', 'model', 'generated', 'caption:', 'a', 'to', 'one', 'two', 'three'];
-
-    const genderedWords = {
-        male: ['man', 'he', 'him', 'his', 'boy', 'male', 'men'],
-        female: ['woman', 'she', 'her', 'hers', 'girl', 'female', 'women'],
-        chef: ['chef', 'chefs']
-    };
-
-    let matrixChart;
-
-    function updateAggregatedPersonFrequency(captionText: string) {
-        if (processedCaptions.has(captionText)) {
-            return;
-        }
-
+    function updateAggregatedPersonFrequency(captionText: string, instance) {
+        if (processedCaptions.has(captionText)) return;
         processedCaptions.add(captionText);
 
         const words = captionText.toLowerCase().split(/\s+/);
+        let containsGenderedWord: { male: boolean; female: boolean; [key: string]: boolean } = { male: false, female: false };
 
-        let containsGenderedWord = { male: false, female: false, chef: false };
+        const singularLabel = $dynamicClassLabel.toLowerCase();
+        const pluralLabel = singularLabel.endsWith('s') ? singularLabel + 'es' : singularLabel + 's';
 
-        Object.keys(genderedWords).forEach((category) => {
-            genderedWords[category].forEach((identifier) => {
+        if (!coOccurrences[$dynamicClassLabel]) {
+            coOccurrences[$dynamicClassLabel] = {};
+        }
+        if (!aggregatedPersonFrequency[$dynamicClassLabel]) {
+            aggregatedPersonFrequency[$dynamicClassLabel] = 0;
+        }
+        if (!captionInstances[$dynamicClassLabel]) {
+            captionInstances[$dynamicClassLabel] = {};
+        }
+
+        Object.keys(genderedWords).forEach(category => {
+            genderedWords[category].forEach(identifier => {
                 if (words.includes(identifier)) {
                     containsGenderedWord[category] = true;
-                    aggregatedPersonFrequency[category] += 1;
+                    aggregatedPersonFrequency[category] = (aggregatedPersonFrequency[category] || 0) + 1;
                 }
             });
         });
 
-        const nonGenderedWords = words.filter(word =>
-            !Object.values(genderedWords).flat().includes(word) && !stopWords.includes(word)
+        if (words.includes(singularLabel) || words.includes(pluralLabel)) {
+            containsGenderedWord[$dynamicClassLabel] = true;
+            aggregatedPersonFrequency[$dynamicClassLabel] = (aggregatedPersonFrequency[$dynamicClassLabel] || 0) + 1;
+        }
+
+        const nonGenderedWords = words.filter(
+            word => !Object.values(genderedWords).flat().includes(word) && !stopWords.includes(word) && word !== singularLabel && word !== pluralLabel
         );
 
         nonGenderedWords.forEach(word => {
-            if (!nonGenderedWordFrequency[word]) {
-                nonGenderedWordFrequency[word] = 0;
-            }
+            if (!nonGenderedWordFrequency[word]) nonGenderedWordFrequency[word] = 0;
             nonGenderedWordFrequency[word]++;
         });
 
         Object.keys(containsGenderedWord).forEach(category => {
+            if (!coOccurrences[category]) coOccurrences[category] = {};
             if (containsGenderedWord[category]) {
                 nonGenderedWords.forEach(word => {
-                    if (!coOccurrences[category][word]) {
-                        coOccurrences[category][word] = 0;
-                        captionInstances[category][word] = []; 
-                    }
-                    coOccurrences[category][word] += 1;
-                    captionInstances[category][word].push(captionText); // Store the caption for this co-occurrence
+                    coOccurrences[category][word] = (coOccurrences[category][word] || 0) + 1;
+                    if (!captionInstances[category][word]) captionInstances[category][word] = [];
+                    captionInstances[category][word].push(instance);
                 });
             }
         });
-
-        updateMatrixChart();
     }
 
-    onMount(() => {
-        const matrixCtx = document.getElementById('matrixChart').getContext('2d');
-        matrixChart = new Chart(matrixCtx, {
-            type: 'matrix',
-            data: {
+
+    function highlightInstancesInDatasetExplorer(word, category) {
+        const instances = captionInstances[category]?.[word] || [];
+        const instanceIds = instances.map(instance => instance.id).filter(Boolean);
+
+        if (instanceIds.length > 0) {
+            trainingSet.sift({ id: { $in: instanceIds } });
+        } else {
+            console.warn(`No valid instances found for Word: "${word}" and Category: "${category}".`);
+        }
+    }
+
+    function generateMatrixData() {
+        if ($dynamicClassLabel === 'all') {
+            return {
+                labels: ['Choose a category'],
                 datasets: [{
-                    label: 'Word Frequency Matrix of Captions',
-                    data: generateMatrixData(),
-                    backgroundColor(context) {
-                        const value = context.raw ? context.raw.v : 0;
-                        return value > 0 ? `rgba(54, 162, 235, ${Math.min(1, value / 5)})` : 'rgba(0, 0, 0, 0.1)';
-                    },
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1,
-                    width(context) {
-                        const chart = context.chart;
-                        const xAxis = chart.scales.x;
-                        return (xAxis.width / xAxis.ticks.length) - 2;
-                    },
-                    height(context) {
-                        const chart = context.chart;
-                        const yAxis = chart.scales.y;
-                        return (yAxis.height / yAxis.ticks.length) - 2;
-                    }
+                    label: 'No data available',
+                    data: [0],
+                    backgroundColor: 'rgba(200, 200, 200, 0.7)',
+                    borderColor: 'rgba(200, 200, 200, 1)',
+                    borderWidth: 1
                 }]
-            },
+            };
+        }
+
+        const mostFrequentNonGenderedWords = getMostFrequentNonGenderedWords(10);
+        let categories = ['male', 'female', $dynamicClassLabel];
+
+        const datasets = categories.map(category => {
+            return {
+                label: category,
+                data: mostFrequentNonGenderedWords.map(nonGenderedWord => coOccurrences[category]?.[nonGenderedWord] || 0),
+                backgroundColor: category === 'male' ? 'rgba(54, 162, 235, 0.7)' :
+                                category === 'female' ? 'rgba(75, 192, 192, 0.7)' :
+                                'rgba(255, 99, 132, 0.7)', 
+                borderColor: category === 'male' ? 'rgba(54, 162, 235, 1)' :
+                            category === 'female' ? 'rgba(75, 192, 192, 1)' :
+                            'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            };
+        });
+
+        return {
+            labels: mostFrequentNonGenderedWords,
+            datasets: datasets
+        };
+    }
+
+
+    async function updateMatrixChart() {
+        await tick(); 
+
+        const canvasEl = document.getElementById('matrixChart') as HTMLCanvasElement;
+        if (!canvasEl) {
+            console.error('Canvas element not found in DOM.');
+            return;
+        }
+
+        const barCtx = canvasEl.getContext('2d');
+        if (!barCtx) {
+            console.error("Failed to get the canvas context. Ensure the canvas is correctly loaded in the DOM.");
+            return;
+        }
+
+        const barChartData = generateMatrixData();
+
+        if (matrixChart) {
+            matrixChart.destroy();  
+        }
+
+        matrixChart = new Chart(barCtx, {
+            type: 'bar',
+            data: barChartData,
             options: {
+                responsive: true,
                 scales: {
                     x: {
-                        type: 'category',
-                        labels: getMostFrequentNonGenderedWords(10),
-                        offset: true,
+                        stacked: true,
                         title: {
                             display: true,
                             text: 'Frequent Words'
-                        }
+                        },
+                        labels: barChartData.labels
                     },
                     y: {
-                        type: 'category',
-                        labels: ['male', 'female', 'chef'],
-                        offset: true,
+                        stacked: true,
+                        beginAtZero: true,
                         title: {
                             display: true,
-                            text: 'Person Identifiers'
+                            text: 'Frequency'
                         }
-                    }
-                },
-                onClick(_, elements) {
-                    if (elements.length > 0) {
-                        const element = elements[0];
-                        console.log('Clicked element:', element);
-                        const { x, y } = element.element.$context.raw;
-                        showCaptionInstances(x, y);
                     }
                 },
                 plugins: {
                     tooltip: {
                         callbacks: {
-                            title() {
-                                return '';
-                            },
                             label(context) {
-                                const { x, y, v } = context.raw || {};
-                                const instances = captionInstances[y][x] || [];
-                                return [
-                                    `Frequent Word: ${x}`,
-                                    `Identified Person: ${y}`,
-                                    `Count: ${v || 0}`,
-                                ];
+                                const word = context.label;
+                                const category = context.dataset.label;
+                                const count = context.raw;
+                                return `${category} - ${word}: ${count}`;
                             }
                         }
+                    }
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const element = elements[0];
+                        const datasetIndex = element.datasetIndex;
+                        const wordIndex = element.index;
+
+                        const word = matrixChart.data.labels[wordIndex];
+                        const category = matrixChart.data.datasets[datasetIndex].label;
+
+                        highlightInstancesInDatasetExplorer(word, category);
                     }
                 }
             }
         });
-    });
-
-    function updateMatrixChart() {
-        const mostFrequentNonGenderedWords = getMostFrequentNonGenderedWords(10);
-        matrixChart.data.datasets[0].data = generateMatrixData();
-        matrixChart.options.scales.x.labels = mostFrequentNonGenderedWords;
-        matrixChart.update();
-    }
-
-    function generateMatrixData() {
-        const data = [];
-        const mostFrequentNonGenderedWords = getMostFrequentNonGenderedWords(10);
-        const categories = ['male', 'female', 'chef'];
-
-        categories.forEach((category) => {
-            mostFrequentNonGenderedWords.forEach((nonGenderedWord) => {
-                const frequency = coOccurrences[category][nonGenderedWord] || 0;
-                if (frequency > 0) {
-                    data.push({
-                        x: nonGenderedWord,
-                        y: category,
-                        v: frequency
-                    });
-                }
-            });
-        });
-
-        return data;
     }
 
     function getMostFrequentNonGenderedWords(limit: number) {
         const sortedWords = Object.entries(nonGenderedWordFrequency)
-            .sort(([, a], [, b]) => b - a)
-            .slice(0, limit)
-            .map(([word]) => word);
-        return sortedWords;
-    }
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, limit)
+                .map(([word]) => word);
+            return sortedWords;
+        }
 
-    function showCaptionInstances(word: string, category: string) {
-        const instances = captionInstances[category][word] || [];
-        console.log('Instances:', instances); 
-        modalContent = instances.map(instance => ({ word, category, instance }));
-        showModal = true; 
-        console.log(showModal);
-    }
-
-    function closeModal() {
-        showModal = false;
+        async function fetchAndProcessCaptions() {
+        try {
+            await trainingSet.ready;
+            const allInstances = await trainingSet.find({ y: $dynamicClassLabel }); 
+            if (allInstances.data.length > 0) {
+                allInstances.data.forEach(instance => {
+                    if (instance.caption) {
+                        updateAggregatedPersonFrequency(instance.caption, instance);
+                    }
+                });
+                updateMatrixChart(); 
+            } else {
+                console.warn("Dataset is empty for the selected class.");
+            }
+        } catch (error) {
+            console.error('Error fetching dataset instances:', error);
+        }
     }
 
     onMount(async () => {
-        await tick();
-        const canvasEl = document.querySelector('#fabric-canvas') as HTMLCanvasElement;
+        await fetchAndProcessCaptions(); 
+
+        const canvasOverlay = document.querySelector('#fabric-canvas') as HTMLCanvasElement;
         const width = 200;
         const height = 200;
 
-        canvas = new fabric.Canvas(canvasEl, {
+        canvas = new fabric.Canvas(canvasOverlay, {
             isDrawingMode: false,
             width: width,
             height: height,
         });
 
         dragOverlay = document.querySelector('#drag-overlay');
-
         if (dragOverlay) {
             dragOverlay.addEventListener('dragstart', onDragStart);
         }
@@ -231,6 +249,22 @@
             }
         });
     });
+
+  let previousLabel = $dynamicClassLabel;
+
+    $: {
+        if ($dynamicClassLabel && $dynamicClassLabel !== previousLabel) {
+            previousLabel = $dynamicClassLabel;
+            processedCaptions.clear();
+            nonGenderedWordFrequency = {};
+            Object.keys(aggregatedPersonFrequency).forEach(key => aggregatedPersonFrequency[key] = 0);
+            Object.keys(coOccurrences).forEach(key => coOccurrences[key] = {});
+            Object.keys(captionInstances).forEach(key => captionInstances[key] = {});
+
+            fetchAndProcessCaptions(); 
+        }
+    }
+
 
     onDestroy(() => {
         if (dragOverlay) {
@@ -276,7 +310,7 @@
 
     function onDragStart(event: DragEvent) {
         const canvasElement = document.querySelector('#fabric-canvas') as HTMLCanvasElement;
-        const currentCaption = caption.$value.get(); 
+        const currentCaption = caption.$value.get();
 
         if (canvasElement) {
             const canvasUrl = canvasElement.toDataURL('image/png');
@@ -293,6 +327,7 @@
     }
 </script>
 
+
 <div class="marcelle card">
     <div class="conf-row">
         <div class="group-components-container instax-style" draggable="true" on:dragstart={onDragStart}>
@@ -308,23 +343,6 @@
     </div>
 </div>
 
-
-{#if showModal}
-<!-- <div class="modal"> -->
-    <div class="modal-content">
-         <span class="close-button" on:click={closeModal}>&times;</span>
-         <div class="instax-grid"> 
-            <p>hellloooo</p>
-            {#each modalContent as { word, category, instance }}
-                <div class="small-instax-style">
-                    <p><strong>{category}:</strong> {word}</p>
-                    <p>{instance}</p>
-                </div>
-            {/each}
-        </div>
-    </div>
-<!-- </div> -->
-{/if}
 
 <style>
     .marcelle.card {
@@ -409,60 +427,5 @@
         align-items: center;
         justify-content: flex-start;
     }
-
-    .small-instax-style {
-        background-color: #fff;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 5px;
-        margin-bottom: 10px;
-        box-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
-        width: 150px;
-        height: 180px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
-        font-size: 0.7rem;
-    }
-
-    .modal {
-        position: fixed;            /* Fix the modal to the viewport */
-        top: 0;                     /* Start from the top of the viewport */
-        left: 0;                    /* Start from the left of the viewport */
-        width: 100vw;               /* Take the full width of the screen */
-        height: 100vh;              /* Take the full height of the screen */
-        background: rgba(0, 0, 0, 0.7);  /* Add a semi-transparent background overlay */
-        display: flex;              /* Use flexbox for centering */
-        justify-content: center;    /* Center horizontally */
-        align-items: center;        /* Center vertically */
-        z-index: 9999;              /* Ensure it's on top of everything */
-    }
-
-
-    .modal-content {
-        background: white;
-        padding: 20px;
-        border-radius: 10px;
-        width: 600px;
-        height: 400px; 
-        max-height: 80%;
-        overflow-y: auto;
-        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
-        border: 2px solid red; /* to debug */
-    }
-
-    .close-button {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        font-size: 1.5rem;
-        cursor: pointer;
-    }
-
-    .instax-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 10px;
-    }
+    
 </style>
