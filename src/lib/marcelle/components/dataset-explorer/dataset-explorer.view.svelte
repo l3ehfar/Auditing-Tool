@@ -6,6 +6,14 @@
   import { scale } from 'svelte/transition';
   import { ViewContainer } from '@marcellejs/design-system';
   import { Button, PopMenu } from '@marcellejs/design-system';
+  import { highlightedInstances } from "$lib/store";
+
+
+  let highlighted = [];
+  highlightedInstances.subscribe(value => {
+    highlighted = value;
+    // console.log('Highlighted instances:', highlighted); 
+  });
 
   export let title: string;
   export let batchSize: number;
@@ -304,6 +312,7 @@ function selectInstance(id?: ObjectId) {
                   alt="thumbnail"
                   class="m-1"
                   class:selected={$selected.includes(id)}
+                  class:highlighted={highlighted.includes(id)} 
                   in:scale
                   out:scale
                   class:small-thumbnail={zoomLevel === 1}
@@ -375,6 +384,11 @@ function selectInstance(id?: ObjectId) {
 
   .browser-class-body img.selected {
     @apply border-gray-600;
+  }
+
+  .browser-class-body img.highlighted {
+    border-color: palegreen; 
+    border-width: 4px;
   }
 
   .small-thumbnail {
