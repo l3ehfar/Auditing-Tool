@@ -338,7 +338,7 @@
             <div class="marcelle-component caption" use:marcelle={caption}></div>
         </div>
         <div class="flex flex-col items-center gap-2">
-                <canvas id="matrixChart" width="400" height="220"></canvas>
+                <canvas id="matrixChart" width="400" height="250"></canvas>
         </div>
     </div>
 </div>

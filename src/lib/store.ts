@@ -5,3 +5,4 @@ export const selectedSubset = writable<string | null>(null);
 export const droppedItems = writable([]);
 
 export const highlightedInstances = writable<string[]>([]);
+export const filteredInstances = writable([]);
