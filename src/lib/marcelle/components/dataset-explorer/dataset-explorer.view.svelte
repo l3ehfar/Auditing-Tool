@@ -84,6 +84,7 @@
     loading = false;
   }
 
+
   function getLabel(id: ObjectId) {
     for (const [label, { instances }] of Object.entries(classes)) {
       if (instances.map((x) => x.id).includes(id)) {
