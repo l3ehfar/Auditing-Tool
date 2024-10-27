@@ -94,9 +94,9 @@ input, button {
 	font-family: inherit;
 }
 
-button:focus:not(:focus-visible) {
+/* button:focus:not(:focus-visible) {
 	outline: none;
-}
+} */
 
 @media (min-width: 720px) {
 	h1 {
