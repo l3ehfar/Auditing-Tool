@@ -2,7 +2,7 @@
   import { droppedItems } from '$lib/store';
   import { onMount } from 'svelte';
   import { writable, get } from 'svelte/store';
-  import { faMousePointer, faObjectGroup } from '@fortawesome/free-solid-svg-icons';
+  import { faMousePointer, faObjectGroup, faComment } from '@fortawesome/free-solid-svg-icons';
   import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
 
   let affinityDiagramArea;
@@ -68,34 +68,34 @@
 
           // Handle different resize directions without affecting items inside
           if (resizeDirection.includes('right')) {
-            newWidth = Math.max(20, resizeStartWidth + deltaX); // Resize width from the right side
+            newWidth = Math.max(20, resizeStartWidth + deltaX); 
           }
           if (resizeDirection.includes('left')) {
-            newWidth = Math.max(20, resizeStartWidth - deltaX); // Resize width from the left
-            newX = resizeStartLeft + deltaX; // Adjust left side position
+            newWidth = Math.max(20, resizeStartWidth - deltaX); 
+            newX = resizeStartLeft + deltaX; 
           }
           if (resizeDirection.includes('bottom')) {
-            newHeight = Math.max(20, resizeStartHeight + deltaY); // Resize height from the bottom
+            newHeight = Math.max(20, resizeStartHeight + deltaY); 
           }
           if (resizeDirection.includes('top')) {
-            newHeight = Math.max(20, resizeStartHeight - deltaY); // Resize height from the top
-            newY = resizeStartTop + deltaY; // Adjust top position
+            newHeight = Math.max(20, resizeStartHeight - deltaY); 
+            newY = resizeStartTop + deltaY; 
           }
 
           // Adjust the textarea height dynamically after width change
           setTimeout(() => {
-            const textarea = document.querySelector(`#textarea-${rect.id}`); // Assuming textarea has an id
+            const textarea = document.querySelector(`#textarea-${rect.id}`); 
             if (textarea) {
-              textarea.style.height = 'auto'; // Reset height to auto first
-              textarea.style.height = `${textarea.scrollHeight}px`; // Recalculate height based on content
+              textarea.style.height = 'auto'; 
+              textarea.style.height = `${textarea.scrollHeight}px`; 
             }
           }, 0);
 
           return {
             ...rect,
-            x: newX, // Update position
+            x: newX, 
             y: newY,
-            width: newWidth, // Update dimensions
+            width: newWidth,
             height: newHeight,
           };
         }
@@ -141,7 +141,6 @@
           }
         }
 
-        // If no rectangle contains the item, trigger an update
         if (!updated) {
           rectangles.update((r) => [...r]);
         }
@@ -253,11 +252,10 @@
   function removeItem(id) {
     droppedItems.update((items) => items.filter((item) => item.id !== id));
 
-    // Remove the item from rectangles but keep the rectangle even if it becomes empty
     rectangles.update((rects) =>
       rects.map((rectangle) => ({
         ...rectangle,
-        items: rectangle.items.filter((item) => item.id !== id), // Remove item from rectangle
+        items: rectangle.items.filter((item) => item.id !== id), 
       })),
     );
   }
@@ -280,7 +278,6 @@
       };
       selectionBox.set({ x: selectionStart.x, y: selectionStart.y, width: 0, height: 0 });
 
-      // Disable text selection globally when drawing starts
       document.body.style.userSelect = 'none';
     }
   }
@@ -300,6 +297,21 @@
     }
   }
 
+  function createTextRectangle() {
+    rectangles.update((rects) => [
+      ...rects,
+      {
+        id: nextId++,
+        x: 100, 
+        y: 100,
+        width: 150, 
+        height: 50,
+        items: [], 
+        text: '', 
+      },
+    ]);
+  }
+
   function endSelection() {
     if (isSelecting) {
       isSelecting = false;
@@ -307,17 +319,16 @@
       const { x, y, width, height } = get(selectionBox);
       const itemsInSelection = get(selectedItems);
 
-      // If items are selected, create a rectangle with the items inside
-      // If no items are selected, create an empty rectangle
-      rectangles.update((rects) => [
-        ...rects,
-        { id: nextId++, x, y, width, height, items: itemsInSelection, text: '' },
-      ]);
+      if (itemsInSelection.length > 0) {
+        rectangles.update((rects) => [
+          ...rects,
+          { id: nextId++, x, y, width, height, items: itemsInSelection, text: '' },
+        ]);
+      }
 
-      // Clear the selection and re-enable text selection
       selectedItems.set([]);
       selectionBox.set({ x: 0, y: 0, width: 0, height: 0 });
-      document.body.style.userSelect = 'auto'; // Re-enable text selection
+      document.body.style.userSelect = 'auto';
     }
   }
 
@@ -342,46 +353,40 @@
     const items = get(droppedItems).filter((item) => rectangle.items.some((i) => i.id === item.id));
 
     if (items.length === 0) {
-      // If no items, remove the rectangle
       rectangles.update((rects) => rects.filter((r) => r.id !== rectangle.id));
       return null;
     }
 
-    // Get the x, y, width, and height of all items in the rectangle
     const xs = items.map((item) => item.x);
     const ys = items.map((item) => item.y);
-    const widths = items.map((item) => item.width || 90); // Default width if not provided
-    const heights = items.map((item) => item.height || 90); // Default height if not provided
+    const widths = items.map((item) => item.width || 90); 
+    const heights = items.map((item) => item.height || 90); 
 
-    // Calculate the minimum and maximum coordinates of the items
-    const minX = Math.min(...xs); // Leftmost edge of all items
-    const minY = Math.min(...ys); // Topmost edge of all items
-    const maxX = Math.max(...xs.map((x, i) => x + widths[i])); // Rightmost edge of all items
-    const maxY = Math.max(...ys.map((y, i) => y + heights[i])); // Bottommost edge of all items
+    const minX = Math.min(...xs); 
+    const minY = Math.min(...ys); 
+    const maxX = Math.max(...xs.map((x, i) => x + widths[i])); 
+    const maxY = Math.max(...ys.map((y, i) => y + heights[i])); 
 
-    // Preserve the existing rectangle dimensions
     let newX = rectangle.x;
     let newY = rectangle.y;
     let newWidth = rectangle.width;
     let newHeight = rectangle.height;
 
-    // Check if the new boundaries exceed the current rectangle's size
     if (minX < rectangle.x) {
-      newX = minX - 5; // Add a small margin
+      newX = minX - 5; 
       newWidth = rectangle.width + (rectangle.x - newX);
     }
     if (minY < rectangle.y) {
-      newY = minY - 5; // Add a small margin
+      newY = minY - 5; 
       newHeight = rectangle.height + (rectangle.y - newY);
     }
     if (maxX > rectangle.x + rectangle.width) {
-      newWidth = maxX - rectangle.x + 5; // Add a small margin
+      newWidth = maxX - rectangle.x + 5; 
     }
     if (maxY > rectangle.y + rectangle.height) {
-      newHeight = maxY - rectangle.y + 5; // Add a small margin
+      newHeight = maxY - rectangle.y + 5; 
     }
 
-    // Return the updated rectangle with adjusted size and position if necessary
     return {
       ...rectangle,
       x: newX,
@@ -418,14 +423,13 @@
           newItems = rectangle.items.filter((i) => i.id !== item.id);
         }
 
-        // Only update if the item array has changed
         if (newItems !== rectangle.items) {
           const updatedRectangle = { ...rectangle, items: newItems };
           const resizedRectangle = updateRectangleDimensions(updatedRectangle);
           return resizedRectangle || updatedRectangle;
         }
 
-        return rectangle; // Return unchanged rectangle if no changes
+        return rectangle; 
       });
     });
   }
@@ -452,8 +456,8 @@
 
   function adjustHeight(event) {
     const element = event.target;
-    element.style.height = 'auto'; // Reset height to allow for shrinkage
-    element.style.height = `${element.scrollHeight}px`; // Set height based on scrollHeight
+    element.style.height = 'auto'; 
+    element.style.height = `${element.scrollHeight}px`; 
   }
 </script>
 
@@ -464,6 +468,7 @@
   on:pointermove={updateSelection}
   on:pointerup={endSelection}
 >
+
   <button
     on:click={toggleSelectionMode}
     class="btn btn-sm btn-secondary selection-mode-button"
@@ -474,6 +479,10 @@
     {:else}
       <FontAwesomeIcon icon={faObjectGroup} />
     {/if}
+  </button>
+
+  <button on:click={createTextRectangle} class="btn btn-sm btn-secondary text-only-button">
+    <FontAwesomeIcon icon={faComment} />
   </button>
 
   <div class="drop-area">
@@ -498,7 +507,6 @@
           on:pointerdown={(e) => startResizing(e, rectangle, 'bottom-right')}
         ></div>
 
-        <!-- Remove rectangle button -->
         <button
           class="btn btn-xs btn-circle absolute top-1 right-1"
           on:click={() => removeRectangle(rectangle.id)}
@@ -507,17 +515,15 @@
           ×
         </button>
 
-        <!-- Text input box for adding/editing hypothesis -->
         <textarea
           id={`textarea-${rectangle.id}`}
-          placeholder="Add hypothesis"
+          placeholder="Add text here"
           bind:value={rectangle.text}
           class="hypothesis-input absolute bottom-1 left-1"
           on:input={adjustHeight}
           on:pointerdown={(e) => e.stopPropagation()}
         ></textarea>
 
-        <!-- Display the rectangle items count -->
         <span class="rect-info">Instances: {rectangle.items.length}</span>
       </div>
     {/each}
@@ -572,6 +578,14 @@
     --box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.1);
   }
 
+  .text-only-button {
+    position: absolute;
+    top: 10px;
+    left: 70px;
+    z-index: 10;
+    width: 50px;
+  }
+
   .affinity-diagram-area {
     width: 100%;
     height: 100%;
@@ -590,19 +604,19 @@
   }
 
   .hypothesis-input {
-    width: calc(100% - 80px); /* Adjust width appropriately */
-    padding: 5px; /* Add padding for some space */
-    border: 1px solid #ccc; /* Standard border */
-    border-radius: 4px; /* Rounded corners */
-    font-size: 0.75rem; /* Font size adjustment */
-    box-sizing: border-box; /* Include padding and border in element width/height */
-    resize: none; /* Disable manual resizing */
-    overflow: hidden; /* Prevent scrollbars */
+    width: calc(100% - 80px); 
+    padding: 5px;
+    border: 1px solid #ccc; 
+    border-radius: 4px; 
+    font-size: 0.75rem; 
+    box-sizing: border-box;
+    resize: none; 
+    overflow: hidden; 
     position: absolute;
-    bottom: 10px; /* Adjust position */
+    bottom: 10px;
     left: 10px;
-    min-height: 20px; /* Set minimum height to avoid collapsing */
-    line-height: 1.2rem; /* Fine-tune the line height */
+    min-height: 20px; 
+    line-height: 1.2rem; 
   }
 
   .drop-area {
@@ -744,20 +758,9 @@
   .resize-handle.bottom-right {
     cursor: nwse-resize;
   }
-  .resize-handle.top-right,
-  .resize-handle.bottom-left {
-    cursor: nesw-resize;
-  }
+
   .resize-handle.top-left {
     top: -5px;
-    left: -5px;
-  }
-  .resize-handle.top-right {
-    top: -5px;
-    right: -5px;
-  }
-  .resize-handle.bottom-left {
-    bottom: -5px;
     left: -5px;
   }
   .resize-handle.bottom-right {
