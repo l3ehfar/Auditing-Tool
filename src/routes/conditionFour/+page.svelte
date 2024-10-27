@@ -66,16 +66,14 @@
       'professional title': false,
     };
 
-    // Initialize gender categories
     ['male', 'female'].forEach((category) => {
       if (!aggregatedPersonFrequency[category]) aggregatedPersonFrequency[category] = 0;
       if (!coOccurrences[category]) coOccurrences[category] = {};
     });
 
     // Track job labels and initialize if needed
-    const jobLabels = ['chef', 'pilot', 'judge']; // Add more job-related labels if needed
+    const jobLabels = ['chef', 'pilot', 'judge']; 
 
-    // For "all" state, add "professional title" as a general job category
     if ($dynamicClassLabel === 'all') {
       if (!aggregatedPersonFrequency['professional title'])
         aggregatedPersonFrequency['professional title'] = 0;
@@ -94,7 +92,6 @@
       }
     }
 
-    // Count gendered words across the dataset
     Object.keys(genderedWords).forEach((category) => {
       genderedWords[category].forEach((identifier) => {
         if (words.includes(identifier)) {
@@ -132,7 +129,6 @@
       (word) => !Object.values(genderedWords).flat().includes(word) && !stopWords.includes(word),
     );
 
-    // Update word frequencies and co-occurrences for each relevant category
     nonGenderedWords.forEach((word) => {
       if (!nonGenderedWordFrequency[word]) nonGenderedWordFrequency[word] = 0;
       nonGenderedWordFrequency[word]++;
@@ -151,31 +147,31 @@
   }
 
   let selectedWords = []; // Array to store multiple selected words
-  let selectedWord = ''; // Variable to store the selected word from the dropdown
-  let customWord = ''; // Variable for custom word input
-  let frequentWords = []; // Array to store the 10 most frequent words
+  let selectedWord = ''; 
+  let customWord = ''; 
+  let frequentWords = []; 
 
   function updateFrequentWords() {
-    frequentWords = getMostFrequentNonGenderedWords(5); // Get top 10 frequent words
+    frequentWords = getMostFrequentNonGenderedWords(5); 
   }
 
   function handleWordSelection() {
     if (selectedWord && !selectedWords.includes(selectedWord)) {
       if (selectedWords.length >= 10) {
-        selectedWords.shift(); // Remove the first word if we already have 10
+        selectedWords.shift(); 
       }
-      selectedWords.push(selectedWord); // Add the selected word at the end
+      selectedWords.push(selectedWord); 
     }
 
     if (customWord && !selectedWords.includes(customWord)) {
       if (selectedWords.length >= 10) {
-        selectedWords.shift(); // Remove the first word if we already have 10
+        selectedWords.shift(); 
       }
-      selectedWords.push(customWord); // Add custom word at the end
+      selectedWords.push(customWord);
     }
 
-    updateMatrixChart(); // Update the chart based on the selected words
-    customWord = ''; // Clear custom word input after adding
+    updateMatrixChart(); 
+    customWord = ''; 
   }
 
   // Update `frequentWords` only when `dynamicClassLabel` is set to a valid class
@@ -184,7 +180,7 @@
     updateMatrixChart();
     frequentWords = getMostFrequentNonGenderedWords(5);
   } else {
-    frequentWords = []; // Clear words if no valid class is selected
+    frequentWords = []; 
   }
 
   function highlightInstancesInDatasetExplorer(word, category) {
@@ -214,7 +210,6 @@
       };
     }
 
-    // Define categories based on dynamicClassLabel
     const categories =
       $dynamicClassLabel === 'all'
         ? ['male', 'female', 'professional title']
@@ -282,7 +277,7 @@
           labels: barChartData.labels,
         },
         y: {
-          stacked: false, // Ensure values are independent on the y-axis
+          stacked: false, 
           beginAtZero: true,
           title: {
             display: true,
