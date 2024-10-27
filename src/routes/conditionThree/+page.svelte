@@ -15,7 +15,7 @@
     let nonGenderedWordFrequency = {}; 
     let matrixChart = null;  
 
-    const stopWords = ['in', 'into', 'of', 'other', 'with', 'is', 'are', 'arafed', 'araffe', 'and', 'model', 'generated', 'caption:', 'a', 'to', 'one', 'two', 'three', 'on'];
+    const stopWords = ['in', 'into', 'of', 'other', 'is', 'are', 'arafed', 'araffe', 'and', 'model', 'generated', 'caption:', 'a', 'to', 'one', 'two', 'three', 'on', 'the', 'at', 'with'];
 
     function updateAggregatedPersonFrequency(captionText: string, instance) {
         if (processedCaptions.has(captionText)) return;
