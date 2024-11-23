@@ -19,15 +19,16 @@ const store = dataStore('http://localhost:3030');
 
 export let dynamicClassLabel = writable('all');
 
-export let aggregatedPersonFrequency: { [key: string]: number } = { male: 0, female: 0, classLabel: 0 };
-export let coOccurrences: { [key: string]: { [word: string]: number } } = { male: {}, female: {}, classLabel: {} };
-export let captionInstances: { [key: string]: { [word: string]: any[] } } = { male: {}, female: {}, classLabel: {} };
+// export let aggregatedPersonFrequency: { [key: string]: number } = { male: 0, female: 0, classLabel: 0 };
+// export let coOccurrences: { [key: string]: { [word: string]: number } } = { male: {}, female: {}, classLabel: {} };
+// export let captionInstances: { [key: string]: { [word: string]: any[] } } = { male: {}, female: {}, classLabel: {} };
+export let captionInstances: { [word: string]: any[] } = {}; 
 
-export const genderedWords = {
-  male: ['man', 'he', 'him', 'his', 'boy', 'male', 'men'],
-  female: ['woman', 'she', 'her', 'hers', 'girl', 'female', 'women'],
-  classLabel: [], 
-};
+// export const genderedWords = {
+//   male: ['man', 'he', 'him', 'his', 'boy', 'male', 'men'],
+//   female: ['woman', 'she', 'her', 'hers', 'girl', 'female', 'women'],
+//   classLabel: [], 
+// };
 
 export interface ImageInstance extends Instance {
   x: ImageData;

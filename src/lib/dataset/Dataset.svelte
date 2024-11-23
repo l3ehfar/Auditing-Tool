@@ -45,18 +45,19 @@
       zoomLevelStore.set(zoomLevel);
     }
   }
+
 </script>
 
 <!-- <h1 class="title">Dataset Browser</h1> -->
 <div class="content">
   <div class="marcelle card">
     <div class="conf-row dataset-tools">
-      <div
+      <!-- <div
         class="tooltip tooltip-open tooltip-accent tooltip-right"
         data-tip="choose a job profession"
-      >
-        <div class="selector" use:marcelle={selectClass}></div>
-      </div>
+      > -->
+        <!-- <div class="selector" use:marcelle={selectClass}></div> -->
+      <!-- </div> -->
       <div class="right-tools">
         <button class="icon" on:click={zoomOut}>
           <FontAwesomeIcon icon={faMagnifyingGlassMinus} />
