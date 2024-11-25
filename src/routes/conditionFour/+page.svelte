@@ -1,4 +1,4 @@
-<script lang="ts">
+<!-- <script lang="ts">
   import {
     caption,
     $imageStream as imageStream,
@@ -338,8 +338,8 @@
     } catch (error) {
       console.error('Error fetching dataset instances:', error);
     }
-  }
-
+  } -->
+<!-- 
   onMount(async () => {
     await fetchAndProcessCaptions();
 
@@ -445,8 +445,8 @@
       console.error('Canvas element not found');
     }
   }
-</script>
-
+</script> -->
+<!-- 
 <div class="marcelle card">
   <div class="conf-row">
     <div
@@ -522,7 +522,6 @@
             class="btn btn-secondary btn-xs">Add Word</button
           >
 
-          <!-- Clear selected words button -->
           <button
             on:click={() => {
               selectedWords = [];
@@ -665,4 +664,4 @@
 .tooltip {
     margin-top: 10px;
 }
-</style>
+</style> -->

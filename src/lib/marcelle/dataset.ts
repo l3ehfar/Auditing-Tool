@@ -24,11 +24,11 @@ export let dynamicClassLabel = writable('all');
 // export let captionInstances: { [key: string]: { [word: string]: any[] } } = { male: {}, female: {}, classLabel: {} };
 export let captionInstances: { [word: string]: any[] } = {}; 
 
-// export const genderedWords = {
-//   male: ['man', 'he', 'him', 'his', 'boy', 'male', 'men'],
-//   female: ['woman', 'she', 'her', 'hers', 'girl', 'female', 'women'],
-//   classLabel: [], 
-// };
+export const genderedWords = {
+  male: ['man', 'he', 'him', 'his', 'boy', 'male', 'men'],
+  female: ['woman', 'she', 'her', 'hers', 'girl', 'female', 'women'],
+  classLabel: [], 
+};
 
 export interface ImageInstance extends Instance {
   x: ImageData;
@@ -104,9 +104,9 @@ selectClass.$value.subscribe((label: string) => {
       dynamicClassLabel.set(label);  
   }
 
-  aggregatedPersonFrequency.classLabel = 0;  
-  coOccurrences.classLabel = {};  
-  captionInstances.classLabel = {};  
+  // aggregatedPersonFrequency.classLabel = 0;  
+  // coOccurrences.classLabel = {};  
+  // captionInstances.classLabel = {};  
 
   trainingSet.sift(newQuery);  
 });
