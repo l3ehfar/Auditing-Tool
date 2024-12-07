@@ -6,6 +6,87 @@
   import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
 
   let affinityDiagramArea;
+
+  let isPanning = false;
+  let panStartX = 0;
+  let panStartY = 0;
+  let panOffset = writable({ x: 0, y: 0 });
+
+  function startPanning(event) {
+    if (isSelecting) return;
+    if (!isPanning && !isDragging && !isResizing) {
+      isPanning = true;
+
+      const rect = affinityDiagramArea.getBoundingClientRect();
+      panStartX = event.clientX - rect.left;
+      panStartY = event.clientY - rect.top;
+
+      document.body.style.cursor = 'grabbing';
+    }
+  }
+
+  function onPanMove(event) {
+    if (isPanning) {
+      const rect = affinityDiagramArea.getBoundingClientRect();
+      const currentX = event.clientX - rect.left;
+      const currentY = event.clientY - rect.top;
+
+      const deltaX = currentX - panStartX;
+      const deltaY = currentY - panStartY;
+
+      panOffset.update((offset) => ({
+        x: offset.x + deltaX,
+        y: offset.y + deltaY,
+      }));
+
+      panStartX = currentX;
+      panStartY = currentY;
+    }
+  }
+
+  function stopPanning() {
+    if (isPanning) {
+      isPanning = false;
+      document.body.style.cursor = 'auto';
+    }
+  }
+
+  export const zoomLevel = writable(1);
+
+  function zoomIn() {
+    zoomLevel.update((level) => Math.min(level + 0.1, 3));
+  }
+
+  function zoomOut() {
+    zoomLevel.update((level) => Math.max(level - 0.1, 0.5));
+  }
+
+  function resetZoom() {
+    zoomLevel.set(1);
+  }
+
+  function handleWheel(event) {
+    event.preventDefault(); 
+
+    const currentZoom = get(zoomLevel); 
+    const zoomChange = event.deltaY > 0 ? -0.1 : 0.1; 
+    const newZoom = Math.min(Math.max(currentZoom + zoomChange, 0.5), 3); 
+
+    if (newZoom === currentZoom) return; 
+
+    const rect = affinityDiagramArea.getBoundingClientRect();
+
+    const mouseXInDiagram = (event.clientX - rect.left - get(panOffset).x) / currentZoom;
+    const mouseYInDiagram = (event.clientY - rect.top - get(panOffset).y) / currentZoom;
+
+    panOffset.update((offset) => ({
+      x: offset.x - mouseXInDiagram * (newZoom - currentZoom),
+      y: offset.y - mouseYInDiagram * (newZoom - currentZoom),
+    }));
+
+    zoomLevel.set(newZoom); 
+  }
+
   let isSelectionMode = writable(false);
   let isSelecting = false;
   let selectionStart = { x: 0, y: 0 };
@@ -40,9 +121,10 @@
     resizeDirection = direction;
     resizingRectangle = rectangle;
 
-    // Save the initial position and size of the rectangle
-    resizeStartX = event.clientX;
-    resizeStartY = event.clientY;
+    const zoom = get(zoomLevel); 
+
+    resizeStartX = event.clientX / zoom;
+    resizeStartY = event.clientY / zoom;
     resizeStartWidth = rectangle.width;
     resizeStartHeight = rectangle.height;
     resizeStartLeft = rectangle.x;
@@ -55,8 +137,10 @@
   function onResizeMove(event) {
     if (!isResizing || !resizingRectangle) return;
 
-    let deltaX = event.clientX - resizeStartX;
-    let deltaY = event.clientY - resizeStartY;
+    const zoom = get(zoomLevel); 
+
+    let deltaX = event.clientX / zoom - resizeStartX;
+    let deltaY = event.clientY / zoom - resizeStartY;
 
     rectangles.update((rects) => {
       return rects.map((rect) => {
@@ -66,34 +150,24 @@
           let newX = resizeStartLeft;
           let newY = resizeStartTop;
 
-          // Handle different resize directions without affecting items inside
           if (resizeDirection.includes('right')) {
-            newWidth = Math.max(20, resizeStartWidth + deltaX); 
+            newWidth = Math.max(20, resizeStartWidth + deltaX);
           }
           if (resizeDirection.includes('left')) {
-            newWidth = Math.max(20, resizeStartWidth - deltaX); 
-            newX = resizeStartLeft + deltaX; 
+            newWidth = Math.max(20, resizeStartWidth - deltaX);
+            newX = resizeStartLeft + deltaX;
           }
           if (resizeDirection.includes('bottom')) {
-            newHeight = Math.max(20, resizeStartHeight + deltaY); 
+            newHeight = Math.max(20, resizeStartHeight + deltaY);
           }
           if (resizeDirection.includes('top')) {
-            newHeight = Math.max(20, resizeStartHeight - deltaY); 
-            newY = resizeStartTop + deltaY; 
+            newHeight = Math.max(20, resizeStartHeight - deltaY);
+            newY = resizeStartTop + deltaY;
           }
-
-          // Adjust the textarea height dynamically after width change
-          setTimeout(() => {
-            const textarea = document.querySelector(`#textarea-${rect.id}`); 
-            if (textarea) {
-              textarea.style.height = 'auto'; 
-              textarea.style.height = `${textarea.scrollHeight}px`; 
-            }
-          }, 0);
 
           return {
             ...rect,
-            x: newX, 
+            x: newX,
             y: newY,
             width: newWidth,
             height: newHeight,
@@ -111,16 +185,20 @@
     document.removeEventListener('pointerup', stopResizing);
   }
 
-  function onDrop(e) {
-    e.preventDefault();
+  function onDrop(event) {
+    event.preventDefault();
 
     try {
-      const droppedData = JSON.parse(e.dataTransfer.getData('text/plain'));
+      const droppedData = JSON.parse(event.dataTransfer.getData('text/plain'));
       const existingItem = get(droppedItems).find((item) => item.id === droppedData.id);
 
       if (!existingItem) {
-        const x = e.clientX - affinityDiagramArea.getBoundingClientRect().left;
-        const y = e.clientY - affinityDiagramArea.getBoundingClientRect().top;
+        const rect = affinityDiagramArea.getBoundingClientRect();
+        const zoom = get(zoomLevel); // Get current zoom level
+        const offset = get(panOffset); // Get current pan offset
+
+        const x = (event.clientX - rect.left - offset.x) / zoom; // Adjust for zoom and pan
+        const y = (event.clientY - rect.top - offset.y) / zoom;
 
         const newItem = { id: nextId++, ...droppedData, x, y };
 
@@ -146,7 +224,7 @@
         }
       }
     } catch (error) {
-      console.error('Failed to parse the dropped data as JSON:', error);
+      console.error('Failed to parse dropped data as JSON:', error);
     }
   }
 
@@ -171,8 +249,10 @@
     dragType = type;
 
     const rect = affinityDiagramArea.getBoundingClientRect();
-    startX = event.clientX - rect.left;
-    startY = event.clientY - rect.top;
+    const zoom = get(zoomLevel);
+
+    startX = (event.clientX - rect.left) / zoom;
+    startY = (event.clientY - rect.top) / zoom;
     initialX = element.x;
     initialY = element.y;
 
@@ -203,8 +283,10 @@
     if (isDragging && draggedElement) {
       event.preventDefault();
       const rect = affinityDiagramArea.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
+      const zoom = get(zoomLevel);
+
+      const x = (event.clientX - rect.left) / zoom;
+      const y = (event.clientY - rect.top) / zoom;
 
       const deltaX = x - startX;
       const deltaY = y - startY;
@@ -215,25 +297,32 @@
             i.id === draggedElement.id ? { ...i, x: initialX + deltaX, y: initialY + deltaY } : i,
           ),
         );
-
-        const updatedItem = get(droppedItems).find((i) => i.id === draggedElement.id);
-
-        updateRectangleMemberships(updatedItem.id);
-      } else if (dragType === 'rectangle') {
+      } else if (dragType === 'rectangle' && !isResizing) {
         rectangles.update((rects) =>
-          rects.map((r) =>
-            r.id === draggedElement.id ? { ...r, x: initialX + deltaX, y: initialY + deltaY } : r,
-          ),
-        );
+          rects.map((r) => {
+            if (r.id === draggedElement.id) {
+              const updatedRectangle = { ...r, x: initialX + deltaX, y: initialY + deltaY };
 
-        droppedItems.update((items) =>
-          items.map((item) => {
-            const initialItem = initialItemPositions.find((i) => i.id === item.id);
-            if (initialItem) {
-              return { ...item, x: initialItem.x + deltaX, y: initialItem.y + deltaY };
-            } else {
-              return item;
+              const updatedItems = r.items.map((item) => {
+                const initialItemPosition = initialItemPositions.find((pos) => pos.id === item.id);
+                if (!initialItemPosition) return item;
+
+                return {
+                  ...item,
+                  x: initialItemPosition.x + deltaX,
+                  y: initialItemPosition.y + deltaY,
+                };
+              });
+
+              droppedItems.update((items) =>
+                items.map(
+                  (item) => updatedItems.find((updatedItem) => updatedItem.id === item.id) || item,
+                ),
+              );
+
+              return { ...updatedRectangle, items: updatedItems };
             }
+            return r;
           }),
         );
       }
@@ -255,7 +344,7 @@
     rectangles.update((rects) =>
       rects.map((rectangle) => ({
         ...rectangle,
-        items: rectangle.items.filter((item) => item.id !== id), 
+        items: rectangle.items.filter((item) => item.id !== id),
       })),
     );
   }
@@ -271,13 +360,16 @@
   function startSelection(event) {
     if (get(isSelectionMode)) {
       isSelecting = true;
-      const rect = affinityDiagramArea.getBoundingClientRect();
-      selectionStart = {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
-      };
-      selectionBox.set({ x: selectionStart.x, y: selectionStart.y, width: 0, height: 0 });
 
+      const rect = affinityDiagramArea.getBoundingClientRect();
+      const zoom = get(zoomLevel);
+
+      selectionStart = {
+        x: (event.clientX - rect.left - get(panOffset).x) / zoom,
+        y: (event.clientY - rect.top - get(panOffset).y) / zoom,
+      };
+
+      selectionBox.set({ x: selectionStart.x, y: selectionStart.y, width: 0, height: 0 });
       document.body.style.userSelect = 'none';
     }
   }
@@ -285,31 +377,20 @@
   function updateSelection(event) {
     if (isSelecting) {
       const rect = affinityDiagramArea.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
+      const zoom = get(zoomLevel);
+
+      const x = (event.clientX - rect.left - get(panOffset).x) / zoom;
+      const y = (event.clientY - rect.top - get(panOffset).y) / zoom;
+
       selectionBox.set({
         x: Math.min(x, selectionStart.x),
         y: Math.min(y, selectionStart.y),
         width: Math.abs(x - selectionStart.x),
         height: Math.abs(y - selectionStart.y),
       });
+
       highlightItemsInSelection();
     }
-  }
-
-  function createTextRectangle() {
-    rectangles.update((rects) => [
-      ...rects,
-      {
-        id: nextId++,
-        x: 100, 
-        y: 100,
-        width: 150, 
-        height: 50,
-        items: [], 
-        text: '', 
-      },
-    ]);
   }
 
   function endSelection() {
@@ -332,6 +413,21 @@
     }
   }
 
+  function createTextRectangle() {
+    rectangles.update((rects) => [
+      ...rects,
+      {
+        id: nextId++,
+        x: 100,
+        y: 100,
+        width: 150,
+        height: 50,
+        items: [],
+        text: '',
+      },
+    ]);
+  }
+
   function highlightItemsInSelection() {
     const { x, y, width, height } = get(selectionBox);
     const selected = get(droppedItems).filter((item) => {
@@ -350,50 +446,7 @@
   }
 
   function updateRectangleDimensions(rectangle) {
-    const items = get(droppedItems).filter((item) => rectangle.items.some((i) => i.id === item.id));
-
-    if (items.length === 0) {
-      rectangles.update((rects) => rects.filter((r) => r.id !== rectangle.id));
-      return null;
-    }
-
-    const xs = items.map((item) => item.x);
-    const ys = items.map((item) => item.y);
-    const widths = items.map((item) => item.width || 90); 
-    const heights = items.map((item) => item.height || 90); 
-
-    const minX = Math.min(...xs); 
-    const minY = Math.min(...ys); 
-    const maxX = Math.max(...xs.map((x, i) => x + widths[i])); 
-    const maxY = Math.max(...ys.map((y, i) => y + heights[i])); 
-
-    let newX = rectangle.x;
-    let newY = rectangle.y;
-    let newWidth = rectangle.width;
-    let newHeight = rectangle.height;
-
-    if (minX < rectangle.x) {
-      newX = minX - 5; 
-      newWidth = rectangle.width + (rectangle.x - newX);
-    }
-    if (minY < rectangle.y) {
-      newY = minY - 5; 
-      newHeight = rectangle.height + (rectangle.y - newY);
-    }
-    if (maxX > rectangle.x + rectangle.width) {
-      newWidth = maxX - rectangle.x + 5; 
-    }
-    if (maxY > rectangle.y + rectangle.height) {
-      newHeight = maxY - rectangle.y + 5; 
-    }
-
-    return {
-      ...rectangle,
-      x: newX,
-      y: newY,
-      width: newWidth,
-      height: newHeight,
-    };
+    return rectangle;
   }
 
   function isItemInsideRectangle(item, rectangle) {
@@ -406,6 +459,10 @@
   }
 
   function updateRectangleMemberships(itemId) {
+    if (isResizing) {
+      return;
+    }
+
     const item = get(droppedItems).find((i) => i.id === itemId);
 
     rectangles.update((rects) => {
@@ -416,20 +473,15 @@
         let newItems = rectangle.items;
 
         if (isInside && !itemInRectangle) {
-          // Add item to rectangle
           newItems = [...rectangle.items, item];
         } else if (!isInside && itemInRectangle) {
-          // Remove item from rectangle
           newItems = rectangle.items.filter((i) => i.id !== item.id);
         }
 
-        if (newItems !== rectangle.items) {
-          const updatedRectangle = { ...rectangle, items: newItems };
-          const resizedRectangle = updateRectangleDimensions(updatedRectangle);
-          return resizedRectangle || updatedRectangle;
-        }
-
-        return rectangle; 
+        return {
+          ...rectangle,
+          items: newItems,
+        };
       });
     });
   }
@@ -456,18 +508,48 @@
 
   function adjustHeight(event) {
     const element = event.target;
-    element.style.height = 'auto'; 
-    element.style.height = `${element.scrollHeight}px`; 
+    element.style.height = 'auto';
+    element.style.height = `${element.scrollHeight}px`;
   }
 </script>
 
 <div
   bind:this={affinityDiagramArea}
   class="affinity-diagram-area"
-  on:pointerdown={startSelection}
-  on:pointermove={updateSelection}
-  on:pointerup={endSelection}
+  class:rect-drawing={$isSelectionMode}
+  on:pointerdown={(e) => {
+    if (get(isSelectionMode)) {
+      startSelection(e);
+    } else {
+      startPanning(e);
+    }
+  }}
+  on:pointermove={(e) => {
+    if (isSelecting) {
+      updateSelection(e);
+    } else if (isPanning) {
+      onPanMove(e);
+    }
+  }}
+  on:pointerup={(e) => {
+    if (isSelecting) {
+      endSelection();
+    }
+    stopPanning();
+  }}
+  on:pointerleave={() => {
+    if (isSelecting) {
+      endSelection();
+    }
+    stopPanning();
+  }}
+  on:wheel={handleWheel}
 >
+  <div class="zoom-controls">
+    <button on:click={zoomIn} class="btn btn-sm btn-secondary">Zoom In</button>
+    <button on:click={zoomOut} class="btn btn-sm btn-secondary">Zoom Out</button>
+    <button on:click={resetZoom} class="btn btn-sm btn-secondary">Reset</button>
+  </div>
 
   <button
     on:click={toggleSelectionMode}
@@ -486,90 +568,96 @@
   </button>
 
   <div class="drop-area">
-    {#each $rectangles as rectangle (rectangle.id)}
-      <div
-        class="selection-box"
-        style="
+    <div
+      class="zoomable-content"
+      style="
+      transform: translate({$panOffset.x}px, {$panOffset.y}px) scale({$zoomLevel});
+      transform-origin: 0 0;"
+    >
+      {#each $rectangles as rectangle (rectangle.id)}
+        <div
+          class="selection-box"
+          style="
       left: {rectangle.x}px; 
       top: {rectangle.y}px; 
       width: {rectangle.width}px; 
       height: {rectangle.height}px;
     "
-        on:pointerdown={(e) => onPointerDown(e, rectangle, 'rectangle')}
-      >
-        <!-- Resize handles -->
-        <div
-          class="resize-handle top-left"
-          on:pointerdown={(e) => startResizing(e, rectangle, 'top-left')}
-        ></div>
-        <div
-          class="resize-handle bottom-right"
-          on:pointerdown={(e) => startResizing(e, rectangle, 'bottom-right')}
-        ></div>
-
-        <button
-          class="btn btn-xs btn-circle absolute top-1 right-1"
-          on:click={() => removeRectangle(rectangle.id)}
-          style="color:red"
+          on:pointerdown={(e) => onPointerDown(e, rectangle, 'rectangle')}
         >
-          ×
-        </button>
+          <div
+            class="resize-handle top-left"
+            on:pointerdown={(e) => startResizing(e, rectangle, 'top-left')}
+          ></div>
+          <div
+            class="resize-handle bottom-right"
+            on:pointerdown={(e) => startResizing(e, rectangle, 'bottom-right')}
+          ></div>
 
-        <textarea
-          id={`textarea-${rectangle.id}`}
-          placeholder="Add text here"
-          bind:value={rectangle.text}
-          class="hypothesis-input absolute bottom-1 left-1"
-          on:input={adjustHeight}
-          on:pointerdown={(e) => e.stopPropagation()}
-        ></textarea>
+          <button
+            class="btn btn-xs btn-circle absolute top-1 right-1"
+            on:click={() => removeRectangle(rectangle.id)}
+            style="color:red"
+          >
+            ×
+          </button>
 
-        <span class="rect-info">Instances: {rectangle.items.length}</span>
-      </div>
-    {/each}
+          <textarea
+            id={`textarea-${rectangle.id}`}
+            placeholder="Add text here"
+            bind:value={rectangle.text}
+            class="hypothesis-input absolute bottom-1 left-1"
+            on:input={adjustHeight}
+            on:pointerdown={(e) => e.stopPropagation()}
+          ></textarea>
 
-    {#each $droppedItems as item}
-      <div
-        class="dropped-item instax-style {isItemSelected(item) ? 'selected' : ''}"
-        style="
+          <span class="rect-info">Instances: {rectangle.items.length}</span>
+        </div>
+      {/each}
+
+      {#each $droppedItems as item}
+        <div
+          class="dropped-item instax-style {isItemSelected(item) ? 'selected' : ''}"
+          style="
             left: {item.x}px; 
             top: {item.y}px; 
             width: {item.width || 90}px;
             height: {item.height || 'auto'};
           "
-        on:pointerdown={(e) => onPointerDown(e, item, 'item')}
-      >
-        <button
-          class="btn btn-xs absolute top-1 right-1"
-          on:click={() => removeItem(item.id)}
-          style="color:red"
+          on:pointerdown={(e) => onPointerDown(e, item, 'item')}
         >
-          ×
-        </button>
-        {#if item.type === 'image-caption'}
-          <img src={item.src} alt="Dropped Image" />
-          <p>{item.caption}</p>
-        {/if}
-        {#if item.type === 'image'}
-          <img src={item.src} alt="Dropped Image" />
-        {/if}
-        {#if item.type === 'caption'}
-          <p>{item.text}</p>
-        {/if}
-      </div>
-    {/each}
+          <button
+            class="btn btn-xs absolute top-1 right-1"
+            on:click={() => removeItem(item.id)}
+            style="color:red"
+          >
+            ×
+          </button>
+          {#if item.type === 'image-caption'}
+            <img src={item.src} alt="Dropped Image" />
+            <p>{item.caption}</p>
+          {/if}
+          {#if item.type === 'image'}
+            <img src={item.src} alt="Dropped Image" />
+          {/if}
+          {#if item.type === 'caption'}
+            <p>{item.text}</p>
+          {/if}
+        </div>
+      {/each}
 
-    {#if isSelecting}
-      <div
-        class="selection-box"
-        style="
+      {#if isSelecting}
+        <div
+          class="selection-box"
+          style="
             left: {$selectionBox.x}px;
             top: {$selectionBox.y}px;
             width: {$selectionBox.width}px;
             height: {$selectionBox.height}px;
           "
-      ></div>
-    {/if}
+        ></div>
+      {/if}
+    </div>
   </div>
 </div>
 
@@ -586,6 +674,10 @@
     width: 50px;
   }
 
+  .affinity-diagram-area.rect-drawing {
+    cursor: crosshair;
+  }
+
   .affinity-diagram-area {
     width: 100%;
     height: 100%;
@@ -593,6 +685,12 @@
     display: flex;
     flex-direction: column;
     box-shadow: var(--box-shadow);
+    overflow: auto;
+    cursor: grab;
+  }
+
+  .affinity-diagram-area:active {
+    cursor: grabbing;
   }
 
   .selection-mode-button {
@@ -603,20 +701,37 @@
     width: 50px;
   }
 
+  .zoomable-content {
+    position: absolute;
+    transform-origin: 0 0;
+    will-change: transform;
+    top: 0;
+    left: 0;
+  }
+
+  .zoom-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+    display: flex;
+    gap: 10px;
+  }
+
   .hypothesis-input {
-    width: calc(100% - 80px); 
+    width: calc(100% - 80px);
     padding: 5px;
-    border: 1px solid #ccc; 
-    border-radius: 4px; 
-    font-size: 0.75rem; 
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.75rem;
     box-sizing: border-box;
-    resize: none; 
-    overflow: hidden; 
+    resize: none;
+    overflow: hidden;
     position: absolute;
     bottom: 10px;
     left: 10px;
-    min-height: 20px; 
-    line-height: 1.2rem; 
+    min-height: 20px;
+    line-height: 1.2rem;
   }
 
   .drop-area {
@@ -627,8 +742,7 @@
     border-radius: 8px;
     background-color: #fff;
     box-shadow: var(--box-shadow);
-    height: 400px;
-    overflow: auto;
+    overflow: scroll;
   }
 
   .dropped-item {
@@ -643,8 +757,8 @@
     border-radius: 8px;
     cursor: grab;
     position: absolute;
-    user-select: none; /* Prevent text selection during drag */
-    touch-action: none; /* Prevent touch scrolling */
+    user-select: none;
+    touch-action: none;
     z-index: 1;
     box-shadow: 0px 1px 1px rgba(0, 0, 0, 0.1);
   }
