@@ -66,13 +66,13 @@
   }
 
   function handleWheel(event) {
-    event.preventDefault(); 
+    event.preventDefault();
 
-    const currentZoom = get(zoomLevel); 
-    const zoomChange = event.deltaY > 0 ? -0.1 : 0.1; 
-    const newZoom = Math.min(Math.max(currentZoom + zoomChange, 0.5), 3); 
+    const currentZoom = get(zoomLevel);
+    const zoomChange = event.deltaY > 0 ? -0.1 : 0.1;
+    const newZoom = Math.min(Math.max(currentZoom + zoomChange, 0.5), 3);
 
-    if (newZoom === currentZoom) return; 
+    if (newZoom === currentZoom) return;
 
     const rect = affinityDiagramArea.getBoundingClientRect();
 
@@ -84,7 +84,7 @@
       y: offset.y - mouseYInDiagram * (newZoom - currentZoom),
     }));
 
-    zoomLevel.set(newZoom); 
+    zoomLevel.set(newZoom);
   }
 
   let isSelectionMode = writable(false);
@@ -121,7 +121,7 @@
     resizeDirection = direction;
     resizingRectangle = rectangle;
 
-    const zoom = get(zoomLevel); 
+    const zoom = get(zoomLevel);
 
     resizeStartX = event.clientX / zoom;
     resizeStartY = event.clientY / zoom;
@@ -137,7 +137,7 @@
   function onResizeMove(event) {
     if (!isResizing || !resizingRectangle) return;
 
-    const zoom = get(zoomLevel); 
+    const zoom = get(zoomLevel);
 
     let deltaX = event.clientX / zoom - resizeStartX;
     let deltaY = event.clientY / zoom - resizeStartY;
@@ -186,64 +186,58 @@
   }
 
   function onDrop(event) {
-  event.preventDefault();
+    event.preventDefault();
 
-  const droppedData = JSON.parse(event.dataTransfer.getData('text/plain'));
-  const existingItem = get(droppedItems).find((item) => item.id === droppedData.id);
+    const droppedData = JSON.parse(event.dataTransfer.getData('text/plain'));
+    const existingItem = get(droppedItems).find((item) => item.id === droppedData.id);
 
-  const rect = affinityDiagramArea.getBoundingClientRect();
-  const zoom = get(zoomLevel);
-  const offset = get(panOffset);
+    const rect = affinityDiagramArea.getBoundingClientRect();
+    const zoom = get(zoomLevel);
+    const offset = get(panOffset);
 
-  const x = (event.clientX - rect.left - offset.x) / zoom;
-  const y = (event.clientY - rect.top - offset.y) / zoom;
+    const x = (event.clientX - rect.left - offset.x) / zoom;
+    const y = (event.clientY - rect.top - offset.y) / zoom;
 
-  const rectanglesList = get(rectangles);
-  const targetRectangle = rectanglesList.find((r) =>
-    isItemInsideRectangle({ x, y, width: 1, height: 1 }, r)
-  );
+    const rectanglesList = get(rectangles);
+    const targetRectangle = rectanglesList.find((r) =>
+      isItemInsideRectangle({ x, y, width: 1, height: 1 }, r),
+    );
 
-  if (existingItem) {
-    if (targetRectangle) {
-      // Add item to rectangle
-      rectangles.update((rects) =>
-        rects.map((r) =>
-          r.id === targetRectangle.id
-            ? { ...r, items: [...r.items, { ...existingItem, x, y }] }
-            : r
-        )
-      );
+    if (existingItem) {
+      if (targetRectangle) {
+        // Add item to rectangle
+        rectangles.update((rects) =>
+          rects.map((r) =>
+            r.id === targetRectangle.id
+              ? { ...r, items: [...r.items, { ...existingItem, x, y }] }
+              : r,
+          ),
+        );
 
-      // Remove item from affinity diagram
-      droppedItems.update((items) => items.filter((item) => item.id !== existingItem.id));
+        // Remove item from affinity diagram
+        droppedItems.update((items) => items.filter((item) => item.id !== existingItem.id));
+      } else {
+        // Move item to new position in the affinity diagram
+        droppedItems.update((items) =>
+          items.map((item) => (item.id === existingItem.id ? { ...item, x, y } : item)),
+        );
+      }
     } else {
-      // Move item to new position in the affinity diagram
-      droppedItems.update((items) =>
-        items.map((item) =>
-          item.id === existingItem.id ? { ...item, x, y } : item
-        )
-      );
-    }
-  } else {
-    const newItem = { id: nextId++, ...droppedData, x, y };
+      const newItem = { id: nextId++, ...droppedData, x, y };
 
-    if (targetRectangle) {
-      // Add new item to the rectangle
-      rectangles.update((rects) =>
-        rects.map((r) =>
-          r.id === targetRectangle.id
-            ? { ...r, items: [...r.items, newItem] }
-            : r
-        )
-      );
-    } else {
-      // Add new item to affinity diagram
-      droppedItems.update((items) => [...items, newItem]);
+      if (targetRectangle) {
+        // Add new item to the rectangle
+        rectangles.update((rects) =>
+          rects.map((r) =>
+            r.id === targetRectangle.id ? { ...r, items: [...r.items, newItem] } : r,
+          ),
+        );
+      } else {
+        // Add new item to affinity diagram
+        droppedItems.update((items) => [...items, newItem]);
+      }
     }
   }
-}
-
-
 
   onMount(() => {
     affinityDiagramArea.addEventListener('dragover', (e) => e.preventDefault());
@@ -297,60 +291,57 @@
   }
 
   function onPointerMove(event) {
-  if (isDragging && draggedElement) {
-    event.preventDefault();
-    const rect = affinityDiagramArea.getBoundingClientRect();
-    const zoom = get(zoomLevel);
+    if (isDragging && draggedElement) {
+      event.preventDefault();
+      const rect = affinityDiagramArea.getBoundingClientRect();
+      const zoom = get(zoomLevel);
 
-    const x = (event.clientX - rect.left) / zoom;
-    const y = (event.clientY - rect.top) / zoom;
+      const x = (event.clientX - rect.left) / zoom;
+      const y = (event.clientY - rect.top) / zoom;
 
-    const deltaX = x - startX;
-    const deltaY = y - startY;
+      const deltaX = x - startX;
+      const deltaY = y - startY;
 
-    if (dragType === 'item') {
-      droppedItems.update((items) =>
-        items.map((i) =>
-          i.id === draggedElement.id
-            ? { ...i, x: initialX + deltaX, y: initialY + deltaY }
-            : i
-        )
-      );
+      if (dragType === 'item') {
+        droppedItems.update((items) =>
+          items.map((i) =>
+            i.id === draggedElement.id ? { ...i, x: initialX + deltaX, y: initialY + deltaY } : i,
+          ),
+        );
 
-      // Check rectangle membership updates
-      updateRectangleMemberships(draggedElement.id);
-    } else if (dragType === 'rectangle' && !isResizing) {
-      rectangles.update((rects) =>
-        rects.map((r) => {
-          if (r.id === draggedElement.id) {
-            const updatedRectangle = { ...r, x: initialX + deltaX, y: initialY + deltaY };
+        // Check rectangle membership updates
+        updateRectangleMemberships(draggedElement.id);
+      } else if (dragType === 'rectangle' && !isResizing) {
+        rectangles.update((rects) =>
+          rects.map((r) => {
+            if (r.id === draggedElement.id) {
+              const updatedRectangle = { ...r, x: initialX + deltaX, y: initialY + deltaY };
 
-            const updatedItems = r.items.map((item) => {
-              const initialItemPosition = initialItemPositions.find((pos) => pos.id === item.id);
-              if (!initialItemPosition) return item;
+              const updatedItems = r.items.map((item) => {
+                const initialItemPosition = initialItemPositions.find((pos) => pos.id === item.id);
+                if (!initialItemPosition) return item;
 
-              return {
-                ...item,
-                x: initialItemPosition.x + deltaX,
-                y: initialItemPosition.y + deltaY,
-              };
-            });
+                return {
+                  ...item,
+                  x: initialItemPosition.x + deltaX,
+                  y: initialItemPosition.y + deltaY,
+                };
+              });
 
-            droppedItems.update((items) =>
-              items.map(
-                (item) => updatedItems.find((updatedItem) => updatedItem.id === item.id) || item
-              )
-            );
+              droppedItems.update((items) =>
+                items.map(
+                  (item) => updatedItems.find((updatedItem) => updatedItem.id === item.id) || item,
+                ),
+              );
 
-            return { ...updatedRectangle, items: updatedItems };
-          }
-          return r;
-        })
-      );
+              return { ...updatedRectangle, items: updatedItems };
+            }
+            return r;
+          }),
+        );
+      }
     }
   }
-}
-
 
   function onPointerUp(event) {
     if (isDragging) {
@@ -437,14 +428,21 @@
   }
 
   function createTextRectangle() {
+    const zoom = get(zoomLevel); // Get the current zoom level
+    const offset = get(panOffset); // Get the current pan offset
+
+    // Use zoom and offset to determine the rectangle's position
+    const x = 100 / zoom - offset.x / zoom;
+    const y = 100 / zoom - offset.y / zoom;
+
     rectangles.update((rects) => [
       ...rects,
       {
         id: nextId++,
-        x: 100,
-        y: 100,
-        width: 150,
-        height: 50,
+        x,
+        y,
+        width: 150 / zoom,
+        height: 50 / zoom,
         items: [],
         text: '',
       },
@@ -482,30 +480,28 @@
   }
 
   function updateRectangleMemberships(itemId) {
-  const item = get(droppedItems).find((i) => i.id === itemId);
+    const item = get(droppedItems).find((i) => i.id === itemId);
 
-  rectangles.update((rects) =>
-    rects.map((rectangle) => {
-      const isInside = isItemInsideRectangle(item, rectangle);
-      const itemInRectangle = rectangle.items.some((i) => i.id === item.id);
+    rectangles.update((rects) =>
+      rects.map((rectangle) => {
+        const isInside = isItemInsideRectangle(item, rectangle);
+        const itemInRectangle = rectangle.items.some((i) => i.id === item.id);
 
-      let newItems = rectangle.items;
+        let newItems = rectangle.items;
 
-      if (isInside && !itemInRectangle) {
-        newItems = [...rectangle.items, item];
-      } else if (!isInside && itemInRectangle) {
-        newItems = rectangle.items.filter((i) => i.id !== item.id);
-      }
+        if (isInside && !itemInRectangle) {
+          newItems = [...rectangle.items, item];
+        } else if (!isInside && itemInRectangle) {
+          newItems = rectangle.items.filter((i) => i.id !== item.id);
+        }
 
-      return {
-        ...rectangle,
-        items: newItems,
-      };
-    })
-  );
-}
-
-
+        return {
+          ...rectangle,
+          items: newItems,
+        };
+      }),
+    );
+  }
 
   function attachTextToRectangle(rectangleId) {
     const userText = prompt('Enter your hypothesis:');
@@ -572,7 +568,7 @@
     <button on:click={resetZoom} class="btn btn-sm btn-secondary">Reset</button>
   </div>
 
-  <button
+  <!-- <button
     on:click={toggleSelectionMode}
     class="btn btn-sm btn-secondary selection-mode-button"
     class:btn-active={$isSelectionMode}
@@ -582,7 +578,7 @@
     {:else}
       <FontAwesomeIcon icon={faObjectGroup} />
     {/if}
-  </button>
+  </button> -->
 
   <button on:click={createTextRectangle} class="btn btn-sm btn-secondary text-only-button">
     <FontAwesomeIcon icon={faComment} />
@@ -690,7 +686,7 @@
   .text-only-button {
     position: absolute;
     top: 10px;
-    left: 70px;
+    left: 10px;
     z-index: 10;
     width: 50px;
   }
