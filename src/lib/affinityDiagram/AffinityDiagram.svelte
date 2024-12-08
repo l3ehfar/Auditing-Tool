@@ -186,47 +186,64 @@
   }
 
   function onDrop(event) {
-    event.preventDefault();
+  event.preventDefault();
 
-    try {
-      const droppedData = JSON.parse(event.dataTransfer.getData('text/plain'));
-      const existingItem = get(droppedItems).find((item) => item.id === droppedData.id);
+  const droppedData = JSON.parse(event.dataTransfer.getData('text/plain'));
+  const existingItem = get(droppedItems).find((item) => item.id === droppedData.id);
 
-      if (!existingItem) {
-        const rect = affinityDiagramArea.getBoundingClientRect();
-        const zoom = get(zoomLevel); // Get current zoom level
-        const offset = get(panOffset); // Get current pan offset
+  const rect = affinityDiagramArea.getBoundingClientRect();
+  const zoom = get(zoomLevel);
+  const offset = get(panOffset);
 
-        const x = (event.clientX - rect.left - offset.x) / zoom; // Adjust for zoom and pan
-        const y = (event.clientY - rect.top - offset.y) / zoom;
+  const x = (event.clientX - rect.left - offset.x) / zoom;
+  const y = (event.clientY - rect.top - offset.y) / zoom;
 
-        const newItem = { id: nextId++, ...droppedData, x, y };
+  const rectanglesList = get(rectangles);
+  const targetRectangle = rectanglesList.find((r) =>
+    isItemInsideRectangle({ x, y, width: 1, height: 1 }, r)
+  );
 
-        droppedItems.update((items) => [...items, newItem]);
+  if (existingItem) {
+    if (targetRectangle) {
+      // Add item to rectangle
+      rectangles.update((rects) =>
+        rects.map((r) =>
+          r.id === targetRectangle.id
+            ? { ...r, items: [...r.items, { ...existingItem, x, y }] }
+            : r
+        )
+      );
 
-        const rectanglesList = get(rectangles);
-        let updated = false;
+      // Remove item from affinity diagram
+      droppedItems.update((items) => items.filter((item) => item.id !== existingItem.id));
+    } else {
+      // Move item to new position in the affinity diagram
+      droppedItems.update((items) =>
+        items.map((item) =>
+          item.id === existingItem.id ? { ...item, x, y } : item
+        )
+      );
+    }
+  } else {
+    const newItem = { id: nextId++, ...droppedData, x, y };
 
-        for (const rectangle of rectanglesList) {
-          if (isItemInsideRectangle(newItem, rectangle)) {
-            rectangle.items.push(newItem);
-            const updatedRectangle = updateRectangleDimensions(rectangle);
-            rectangles.update((rects) =>
-              rects.map((r) => (r.id === updatedRectangle.id ? updatedRectangle : r)),
-            );
-            updated = true;
-            break;
-          }
-        }
-
-        if (!updated) {
-          rectangles.update((r) => [...r]);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to parse dropped data as JSON:', error);
+    if (targetRectangle) {
+      // Add new item to the rectangle
+      rectangles.update((rects) =>
+        rects.map((r) =>
+          r.id === targetRectangle.id
+            ? { ...r, items: [...r.items, newItem] }
+            : r
+        )
+      );
+    } else {
+      // Add new item to affinity diagram
+      droppedItems.update((items) => [...items, newItem]);
     }
   }
+}
+
+
 
   onMount(() => {
     affinityDiagramArea.addEventListener('dragover', (e) => e.preventDefault());
@@ -280,54 +297,60 @@
   }
 
   function onPointerMove(event) {
-    if (isDragging && draggedElement) {
-      event.preventDefault();
-      const rect = affinityDiagramArea.getBoundingClientRect();
-      const zoom = get(zoomLevel);
+  if (isDragging && draggedElement) {
+    event.preventDefault();
+    const rect = affinityDiagramArea.getBoundingClientRect();
+    const zoom = get(zoomLevel);
 
-      const x = (event.clientX - rect.left) / zoom;
-      const y = (event.clientY - rect.top) / zoom;
+    const x = (event.clientX - rect.left) / zoom;
+    const y = (event.clientY - rect.top) / zoom;
 
-      const deltaX = x - startX;
-      const deltaY = y - startY;
+    const deltaX = x - startX;
+    const deltaY = y - startY;
 
-      if (dragType === 'item') {
-        droppedItems.update((items) =>
-          items.map((i) =>
-            i.id === draggedElement.id ? { ...i, x: initialX + deltaX, y: initialY + deltaY } : i,
-          ),
-        );
-      } else if (dragType === 'rectangle' && !isResizing) {
-        rectangles.update((rects) =>
-          rects.map((r) => {
-            if (r.id === draggedElement.id) {
-              const updatedRectangle = { ...r, x: initialX + deltaX, y: initialY + deltaY };
+    if (dragType === 'item') {
+      droppedItems.update((items) =>
+        items.map((i) =>
+          i.id === draggedElement.id
+            ? { ...i, x: initialX + deltaX, y: initialY + deltaY }
+            : i
+        )
+      );
 
-              const updatedItems = r.items.map((item) => {
-                const initialItemPosition = initialItemPositions.find((pos) => pos.id === item.id);
-                if (!initialItemPosition) return item;
+      // Check rectangle membership updates
+      updateRectangleMemberships(draggedElement.id);
+    } else if (dragType === 'rectangle' && !isResizing) {
+      rectangles.update((rects) =>
+        rects.map((r) => {
+          if (r.id === draggedElement.id) {
+            const updatedRectangle = { ...r, x: initialX + deltaX, y: initialY + deltaY };
 
-                return {
-                  ...item,
-                  x: initialItemPosition.x + deltaX,
-                  y: initialItemPosition.y + deltaY,
-                };
-              });
+            const updatedItems = r.items.map((item) => {
+              const initialItemPosition = initialItemPositions.find((pos) => pos.id === item.id);
+              if (!initialItemPosition) return item;
 
-              droppedItems.update((items) =>
-                items.map(
-                  (item) => updatedItems.find((updatedItem) => updatedItem.id === item.id) || item,
-                ),
-              );
+              return {
+                ...item,
+                x: initialItemPosition.x + deltaX,
+                y: initialItemPosition.y + deltaY,
+              };
+            });
 
-              return { ...updatedRectangle, items: updatedItems };
-            }
-            return r;
-          }),
-        );
-      }
+            droppedItems.update((items) =>
+              items.map(
+                (item) => updatedItems.find((updatedItem) => updatedItem.id === item.id) || item
+              )
+            );
+
+            return { ...updatedRectangle, items: updatedItems };
+          }
+          return r;
+        })
+      );
     }
   }
+}
+
 
   function onPointerUp(event) {
     if (isDragging) {
@@ -459,32 +482,30 @@
   }
 
   function updateRectangleMemberships(itemId) {
-    if (isResizing) {
-      return;
-    }
+  const item = get(droppedItems).find((i) => i.id === itemId);
 
-    const item = get(droppedItems).find((i) => i.id === itemId);
+  rectangles.update((rects) =>
+    rects.map((rectangle) => {
+      const isInside = isItemInsideRectangle(item, rectangle);
+      const itemInRectangle = rectangle.items.some((i) => i.id === item.id);
 
-    rectangles.update((rects) => {
-      return rects.map((rectangle) => {
-        const isInside = isItemInsideRectangle(item, rectangle);
-        const itemInRectangle = rectangle.items.some((i) => i.id === item.id);
+      let newItems = rectangle.items;
 
-        let newItems = rectangle.items;
+      if (isInside && !itemInRectangle) {
+        newItems = [...rectangle.items, item];
+      } else if (!isInside && itemInRectangle) {
+        newItems = rectangle.items.filter((i) => i.id !== item.id);
+      }
 
-        if (isInside && !itemInRectangle) {
-          newItems = [...rectangle.items, item];
-        } else if (!isInside && itemInRectangle) {
-          newItems = rectangle.items.filter((i) => i.id !== item.id);
-        }
+      return {
+        ...rectangle,
+        items: newItems,
+      };
+    })
+  );
+}
 
-        return {
-          ...rectangle,
-          items: newItems,
-        };
-      });
-    });
-  }
+
 
   function attachTextToRectangle(rectangleId) {
     const userText = prompt('Enter your hypothesis:');
