@@ -216,11 +216,11 @@
             class="range range-primary"
           />
           <div class="color-palette">
-            <button
+            <!-- <button
               class="btn btn-xs btn-circle"
               style="background-color: #ff0000;"
               on:click={() => changeBrushColor('#ff0000')}
-            ></button>
+            ></button> -->
             <button
               class="btn btn-xs btn-circle"
               style="background-color: #ffffff; border: 1px solid #ddd;"
@@ -373,7 +373,7 @@
   .color-palette {
     margin-top: 10px;
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     gap: 10px;
   }
 

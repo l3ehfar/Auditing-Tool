@@ -48,27 +48,96 @@ export const caption = text('model generated caption:');
 export const input = imageUpload();
 export const label = textInput();
 
+// List of words to remove from captions
+const unwantedWords = [
+  'araffe', 'arafed', 'arafian', 'arafe', 
+  'arraffe', 'arrafe', 'arrafed', 'araffed', 'arraffed'
+];
+
+// Function to clean captions and replace unwanted words with "a "
+function cleanCaption(caption: string): string {
+  const regex = new RegExp(`\\b(${unwantedWords.join('|')})\\b`, 'gi');
+  const cleanedCaption = caption.replace(regex, 'a ').replace(/\s+/g, ' ').trim();
+  
+  return cleanedCaption;
+}
+
 export async function generateCaption(image: ImageData): Promise<string> {
   try {
     const res = await HFmodel.predict(image);
     if (res && res.length > 0 && res[0].generated_text) {
-      const generatedCaption = res[0].generated_text;
+      let generatedCaption = res[0].generated_text;
+
+      // Clean the generated caption
+      generatedCaption = cleanCaption(generatedCaption);
+
       caption.$value.set(generatedCaption);
-      console.log('Caption generated:', generatedCaption); 
       return generatedCaption; 
     } else {
       const noCaption = 'No caption generated';
       caption.$value.set(noCaption);
-      console.warn('Failed to generate a caption');
       return noCaption;
     }
   } catch (error) {
     const errorCaption = 'Error generating caption';
     caption.$value.set(errorCaption);
-    console.error('Error with model:', error);
     return errorCaption;
   }
 }
+
+export async function handleCapture() {
+  const labelValue = label.$value.get();
+  const imageData = input.$images.get();
+  const thumbnailData = input.$thumbnails.get();
+
+  if (imageData && labelValue) {
+    let instanceCaption = caption.$value.get();
+
+    if (!instanceCaption || instanceCaption === 'No caption generated') {
+      instanceCaption = await generateCaption(imageData);
+    }
+
+    if (!instanceCaption || instanceCaption === 'No caption generated') {
+      notification({
+        title: 'Caption Generation Failed',
+        message: 'No valid caption was generated for the uploaded image.',
+        duration: 5000,
+      });
+      return;
+    }
+
+
+    // Clean the instance caption before storing
+    instanceCaption = cleanCaption(instanceCaption);
+
+    const instance: ImageInstance = {
+      x: imageData,
+      y: labelValue,
+      thumbnail: thumbnailData,
+      caption: instanceCaption,
+    };
+
+    const createdInstance = await trainingSet.create(instance);
+
+    if (createdInstance && (createdInstance._id || createdInstance.id)) {
+      notification({
+        title: 'Upload Successful',
+        message: `The item was successfully uploaded with the caption: "${instanceCaption}"`,
+        duration: 5000,
+      });
+    } else {
+      console.error('Instance creation failed or no `_id` or `id` assigned.');
+    }
+  } else {
+    notification({
+      title: 'Upload Failed',
+      message: 'Please provide an image and label.',
+      duration: 3000,
+    });
+  }
+}
+
+
 
 input.$images.subscribe((img) => {
   if (img) {
@@ -110,58 +179,6 @@ selectClass.$value.subscribe((label: string) => {
 
   trainingSet.sift(newQuery);  
 });
-
-
-
-export async function handleCapture() {
-  const labelValue = label.$value.get();
-  const imageData = input.$images.get();
-  const thumbnailData = input.$thumbnails.get();
-
-  if (imageData && labelValue) {
-    let instanceCaption = caption.$value.get();
-
-    if (!instanceCaption || instanceCaption === 'No caption generated') {
-      instanceCaption = await generateCaption(imageData);
-    }
-
-    if (!instanceCaption || instanceCaption === 'No caption generated') {
-      notification({
-        title: 'Caption Generation Failed',
-        message: 'No valid caption was generated for the uploaded image.',
-        duration: 5000,
-      });
-      return;
-    }
-
-    const instance: ImageInstance = {
-      x: imageData,
-      y: labelValue,
-      thumbnail: thumbnailData,
-      caption: instanceCaption,
-    };
-
-
-    const createdInstance = await trainingSet.create(instance);
-
-    // Check for both `id` and `_id`
-    if (createdInstance && (createdInstance._id || createdInstance.id)) {
-      notification({
-        title: 'Upload Successful',
-        message: `The item was successfully uploaded with the caption: "${instanceCaption}"`,
-        duration: 5000,
-      });
-    } else {
-      console.error('Instance creation failed or no `_id` or `id` assigned.');
-    }
-  } else {
-    notification({
-      title: 'Upload Failed',
-      message: 'Please provide an image and label.',
-      duration: 3000,
-    });
-  }
-}
 
 
 let selectedImageInstance: ImageInstance | null = null;
