@@ -186,58 +186,57 @@
   }
 
   function onDrop(event) {
-    event.preventDefault();
+  event.preventDefault();
 
-    const droppedData = JSON.parse(event.dataTransfer.getData('text/plain'));
-    const existingItem = get(droppedItems).find((item) => item.id === droppedData.id);
+  const droppedData = JSON.parse(event.dataTransfer.getData('text/plain'));
+  const existingItem = get(droppedItems).find((item) => item.id === droppedData.id);
 
-    const rect = affinityDiagramArea.getBoundingClientRect();
-    const zoom = get(zoomLevel);
-    const offset = get(panOffset);
+  const rect = affinityDiagramArea.getBoundingClientRect();
+  const zoom = get(zoomLevel);
+  const offset = get(panOffset);
 
-    const x = (event.clientX - rect.left - offset.x) / zoom;
-    const y = (event.clientY - rect.top - offset.y) / zoom;
+  const x = (event.clientX - rect.left - offset.x) / zoom;
+  const y = (event.clientY - rect.top - offset.y) / zoom;
 
-    const rectanglesList = get(rectangles);
-    const targetRectangle = rectanglesList.find((r) =>
-      isItemInsideRectangle({ x, y, width: 1, height: 1 }, r),
+  const rectanglesList = get(rectangles);
+  const targetRectangle = rectanglesList.find((r) =>
+    isItemInsideRectangle({ x, y, width: 1, height: 1 }, r),
+  );
+
+  const parentId = targetRectangle ? targetRectangle.id : null;
+
+  let newItem = null;
+
+  if (existingItem) {
+    droppedItems.update((items) =>
+      items.map((item) =>
+        item.id === existingItem.id
+          ? {
+              ...item,
+              x: parentId ? x : item.x, // Set absolute x
+              y: parentId ? y : item.y, // Set absolute y
+              parentId,
+            }
+          : item,
+      ),
     );
-
-    if (existingItem) {
-      if (targetRectangle) {
-        // Add item to rectangle
-        rectangles.update((rects) =>
-          rects.map((r) =>
-            r.id === targetRectangle.id
-              ? { ...r, items: [...r.items, { ...existingItem, x, y }] }
-              : r,
-          ),
-        );
-
-        // Remove item from affinity diagram
-        droppedItems.update((items) => items.filter((item) => item.id !== existingItem.id));
-      } else {
-        // Move item to new position in the affinity diagram
-        droppedItems.update((items) =>
-          items.map((item) => (item.id === existingItem.id ? { ...item, x, y } : item)),
-        );
-      }
-    } else {
-      const newItem = { id: nextId++, ...droppedData, x, y };
-
-      if (targetRectangle) {
-        // Add new item to the rectangle
-        rectangles.update((rects) =>
-          rects.map((r) =>
-            r.id === targetRectangle.id ? { ...r, items: [...r.items, newItem] } : r,
-          ),
-        );
-      } else {
-        // Add new item to affinity diagram
-        droppedItems.update((items) => [...items, newItem]);
-      }
-    }
+  } else {
+    newItem = {
+      id: nextId++,
+      ...droppedData,
+      x,
+      y,
+      parentId,
+    };
+    droppedItems.update((items) => [...items, newItem]);
   }
+
+  const itemId = existingItem ? existingItem.id : newItem?.id;
+  if (itemId) {
+    updateRectangleMemberships(itemId);
+  }
+}
+
 
   onMount(() => {
     affinityDiagramArea.addEventListener('dragover', (e) => e.preventDefault());
@@ -480,28 +479,30 @@
   }
 
   function updateRectangleMemberships(itemId) {
-    const item = get(droppedItems).find((i) => i.id === itemId);
+  const item = get(droppedItems).find((i) => i.id === itemId);
 
-    rectangles.update((rects) =>
-      rects.map((rectangle) => {
-        const isInside = isItemInsideRectangle(item, rectangle);
-        const itemInRectangle = rectangle.items.some((i) => i.id === item.id);
+  rectangles.update((rects) =>
+    rects.map((rectangle) => {
+      const isInside = isItemInsideRectangle(item, rectangle);
+      const itemInRectangle = rectangle.items.some((i) => i.id === item.id);
 
-        let newItems = rectangle.items;
-
-        if (isInside && !itemInRectangle) {
-          newItems = [...rectangle.items, item];
-        } else if (!isInside && itemInRectangle) {
-          newItems = rectangle.items.filter((i) => i.id !== item.id);
-        }
-
+      if (isInside && !itemInRectangle) {
         return {
           ...rectangle,
-          items: newItems,
+          items: [...rectangle.items, item],
         };
-      }),
-    );
-  }
+      } else if (!isInside && itemInRectangle) {
+        return {
+          ...rectangle,
+          items: rectangle.items.filter((i) => i.id !== item.id),
+        };
+      }
+
+      return rectangle;
+    }),
+  );
+}
+
 
   function attachTextToRectangle(rectangleId) {
     const userText = prompt('Enter your hypothesis:');
@@ -628,21 +629,55 @@
             on:pointerdown={(e) => e.stopPropagation()}
           ></textarea>
 
-          <span class="rect-info">Instances: {rectangle.items.length}</span>
-        </div>
-      {/each}
-
-      {#each $droppedItems as item}
-        <div
+          <!-- {#each rectangle.items as item (item.id)}
+          <div
           class="dropped-item instax-style {isItemSelected(item) ? 'selected' : ''}"
           style="
             left: {item.x}px; 
             top: {item.y}px; 
             width: {item.width || 90}px;
             height: {item.height || 'auto'};
+            position: absolute;
+            background: yellow;
           "
           on:pointerdown={(e) => onPointerDown(e, item, 'item')}
         >
+          <button
+          class="btn btn-xs absolute top-1 right-1"
+          on:click={() => removeItem(item.id)}
+          style="color:red"
+        >
+          ×
+        </button>
+        {#if item.type === 'image-caption'}
+          <img src={item.src} alt="Dropped Image" />
+          <p>{item.caption}</p>
+        {/if}
+        {#if item.type === 'image'}
+          <img src={item.src} alt="Dropped Image" />
+        {/if}
+        {#if item.type === 'caption'}
+          <p>{item.text}</p>
+        {/if}
+          </div>
+        {/each} -->
+
+          <span class="rect-info">Instances: {rectangle.items.length}</span>
+        </div>
+      {/each}
+
+      {#each $droppedItems as item}
+      <div
+      class="dropped-item instax-style {isItemSelected(item) ? 'selected' : ''}"
+      style="
+        left: {item.x}px;
+        top: {item.y}px;
+        width: {item.width || 90}px;
+        height: {item.height || 'auto'};
+        position: absolute;
+      "
+      on:pointerdown={(e) => onPointerDown(e, item, 'item')}
+    >
           <button
             class="btn btn-xs absolute top-1 right-1"
             on:click={() => removeItem(item.id)}
