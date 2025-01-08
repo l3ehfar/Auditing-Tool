@@ -6,3 +6,4 @@ export const droppedItems = writable([]);
 
 export const highlightedInstances = writable<string[]>([]);
 export const filteredInstances = writable([]);
+export const exportedHypotheses = writable([]);
