@@ -253,32 +253,58 @@
     }
   }
 
-  function filterDatasetBySelectedWords() {
+  function normalizeWord(word: string): string {
+  return word.toLowerCase().trim();
+}
+
+function matchWord(word: string, target: string): boolean {
+  // Normalize both words
+  word = normalizeWord(word);
+  target = normalizeWord(target);
+
+  // Simple pluralization rules
+  if (word === target || word + 's' === target || word === target + 's') {
+    return true;
+  }
+
+  // Add more rules if needed, e.g., for words ending in "es" or irregular plurals
+  if (word.endsWith('y') && target === word.slice(0, -1) + 'ies') {
+    return true;
+  }
+
+  return false;
+}
+
+function filterDatasetBySelectedWords() {
   if (selectedWordsList.length === 0) {
     resetDatasetFilter(); 
     return;
   }
 
- 
-  let matchingInstances = [...(captionInstances[selectedWordsList[0]] || []).map((instance) => instance.id)];
+  let matchingInstances: string[] = [];
 
+  // Iterate over the captions and match words
+  for (const [caption, instances] of Object.entries(captionInstances)) {
+    const wordsInCaption = caption.toLowerCase().split(/\s+/);
 
-  for (let i = 1; i < selectedWordsList.length; i++) {
-    const word = selectedWordsList[i];
-    const wordInstances = captionInstances[word] || [];
-    const wordIds = wordInstances.map((instance) => instance.id);
+    // Check if the caption contains all selected words (or their variations)
+    const containsAllSelectedWords = selectedWordsList.every((selectedWord) =>
+      wordsInCaption.some((word) => matchWord(selectedWord, word))
+    );
 
-    matchingInstances = matchingInstances.filter((id) => wordIds.includes(id));
-
-    if (matchingInstances.length === 0) {
-      console.warn('No matching instances for the selected words.');
-      trainingSet.sift({ id: { $in: [] } }); 
-      return;
+    if (containsAllSelectedWords) {
+      matchingInstances.push(...instances.map((instance) => instance.id));
     }
   }
 
-  trainingSet.sift({ id: { $in: matchingInstances } });
+  if (matchingInstances.length > 0) {
+    trainingSet.sift({ id: { $in: matchingInstances } });
+  } else {
+    console.warn('No matching instances for the selected words.');
+    trainingSet.sift({ id: { $in: [] } });
+  }
 }
+
 
 
 $: {

@@ -62,6 +62,50 @@ function cleanCaption(caption: string): string {
   return cleanedCaption;
 }
 
+async function cropAndResizeImage(image: ImageData): Promise<ImageData> {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) {
+    throw new Error('Failed to create canvas context');
+  }
+
+  // Convert ImageData to an HTMLImageElement
+  const imageBitmap = await createImageBitmap(image);
+
+  // Get original dimensions
+  const originalWidth = imageBitmap.width;
+  const originalHeight = imageBitmap.height;
+
+  // Determine the size of the largest square
+  const squareSize = Math.min(originalWidth, originalHeight);
+
+  // Calculate cropping start points to center the square
+  const cropX = (originalWidth - squareSize) / 2;
+  const cropY = (originalHeight - squareSize) / 2;
+
+  // Set canvas dimensions to 200x200
+  canvas.width = 200;
+  canvas.height = 200;
+
+  // Draw the cropped and resized image onto the canvas
+  ctx.drawImage(
+    imageBitmap,
+    cropX,
+    cropY,
+    squareSize,
+    squareSize, // Crop area
+    0,
+    0,
+    200,
+    200 // Resize to 200x200
+  );
+
+  // Return ImageData directly
+  return ctx.getImageData(0, 0, canvas.width, canvas.height);
+}
+
+
 export async function generateCaption(image: ImageData): Promise<string> {
   try {
     const res = await HFmodel.predict(image);
@@ -91,42 +135,54 @@ export async function handleCapture() {
   const thumbnailData = input.$thumbnails.get();
 
   if (imageData && labelValue) {
-    let instanceCaption = caption.$value.get();
+    try {
+      // Crop and resize the uploaded image
+      const processedImage = await cropAndResizeImage(imageData);
 
-    if (!instanceCaption || instanceCaption === 'No caption generated') {
-      instanceCaption = await generateCaption(imageData);
-    }
+      // Generate a caption for the processed image
+      let instanceCaption = caption.$value.get();
 
-    if (!instanceCaption || instanceCaption === 'No caption generated') {
+      if (!instanceCaption || instanceCaption === 'No caption generated') {
+        instanceCaption = await generateCaption(processedImage);
+      }
+
+      if (!instanceCaption || instanceCaption === 'No caption generated') {
+        notification({
+          title: 'Caption Generation Failed',
+          message: 'No valid caption was generated for the uploaded image.',
+          duration: 5000,
+        });
+        return;
+      }
+
+      // Clean the instance caption before storing
+      instanceCaption = cleanCaption(instanceCaption);
+
+      const instance: ImageInstance = {
+        x: processedImage, // Use the processed (cropped and resized) image
+        y: labelValue,
+        thumbnail: thumbnailData,
+        caption: instanceCaption,
+      };
+
+      const createdInstance = await trainingSet.create(instance);
+
+      if (createdInstance && (createdInstance._id || createdInstance.id)) {
+        notification({
+          title: 'Upload Successful',
+          message: `The item was successfully uploaded with the caption: "${instanceCaption}"`,
+          duration: 5000,
+        });
+      } else {
+        console.error('Instance creation failed or no `_id` or `id` assigned.');
+      }
+    } catch (error) {
+      console.error('Error during image processing or dataset creation:', error);
       notification({
-        title: 'Caption Generation Failed',
-        message: 'No valid caption was generated for the uploaded image.',
+        title: 'Error',
+        message: 'Failed to process and save the image. Please try again.',
         duration: 5000,
       });
-      return;
-    }
-
-
-    // Clean the instance caption before storing
-    instanceCaption = cleanCaption(instanceCaption);
-
-    const instance: ImageInstance = {
-      x: imageData,
-      y: labelValue,
-      thumbnail: thumbnailData,
-      caption: instanceCaption,
-    };
-
-    const createdInstance = await trainingSet.create(instance);
-
-    if (createdInstance && (createdInstance._id || createdInstance.id)) {
-      notification({
-        title: 'Upload Successful',
-        message: `The item was successfully uploaded with the caption: "${instanceCaption}"`,
-        duration: 5000,
-      });
-    } else {
-      console.error('Instance creation failed or no `_id` or `id` assigned.');
     }
   } else {
     notification({
@@ -138,10 +194,18 @@ export async function handleCapture() {
 }
 
 
+input.$images.subscribe(async (image) => {
+  if (image) {
+    try {
+      // Crop and resize the uploaded image
+      const processedImage = await cropAndResizeImage(image);
 
-input.$images.subscribe((img) => {
-  if (img) {
-    generateCaption(img);
+      // Generate caption for the processed image
+      const generatedCaption = await generateCaption(processedImage);
+      caption.$value.set(generatedCaption);
+    } catch (error) {
+      console.error('Error processing image:', error);
+    }
   }
 });
 
@@ -216,18 +280,34 @@ $selectedImage.subscribe((instance) => {
   }
 });
 
-input.$images.subscribe((image) => {
+input.$images.subscribe(async (image) => {
   if (image) {
-    $imageStream.set(image);
-    generateCaption(image).then((generatedCaption) => {
+    try {
+      // Crop and resize the uploaded image
+      const processedImage = await cropAndResizeImage(image);
+
+      // Update the image stream with the processed image
+      $imageStream.set(processedImage);
+
+      // Generate caption for the processed image
+      const generatedCaption = await generateCaption(processedImage);
       caption.$value.set(generatedCaption);
+
       notification({
         title: 'Caption Generated',
         message: `The following caption was generated: "${generatedCaption}"`,
         duration: 5000,
       });
-    });
+    } catch (error) {
+      console.error('Error processing image:', error);
+      notification({
+        title: 'Image Processing Error',
+        message: 'Failed to process the uploaded image. Please try again.',
+        duration: 5000,
+      });
+    }
   }
 });
+
 
 export const ImageDisplay = imageDisplay($imageStream);

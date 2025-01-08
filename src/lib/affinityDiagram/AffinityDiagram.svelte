@@ -4,6 +4,7 @@
   import { writable, get } from 'svelte/store';
   import { faMousePointer, faObjectGroup, faComment } from '@fortawesome/free-solid-svg-icons';
   import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
+  import { goto } from '$app/navigation';
 
   let affinityDiagramArea;
 
@@ -186,57 +187,56 @@
   }
 
   function onDrop(event) {
-  event.preventDefault();
+    event.preventDefault();
 
-  const droppedData = JSON.parse(event.dataTransfer.getData('text/plain'));
-  const existingItem = get(droppedItems).find((item) => item.id === droppedData.id);
+    const droppedData = JSON.parse(event.dataTransfer.getData('text/plain'));
+    const existingItem = get(droppedItems).find((item) => item.id === droppedData.id);
 
-  const rect = affinityDiagramArea.getBoundingClientRect();
-  const zoom = get(zoomLevel);
-  const offset = get(panOffset);
+    const rect = affinityDiagramArea.getBoundingClientRect();
+    const zoom = get(zoomLevel);
+    const offset = get(panOffset);
 
-  const x = (event.clientX - rect.left - offset.x) / zoom;
-  const y = (event.clientY - rect.top - offset.y) / zoom;
+    const x = (event.clientX - rect.left - offset.x) / zoom;
+    const y = (event.clientY - rect.top - offset.y) / zoom;
 
-  const rectanglesList = get(rectangles);
-  const targetRectangle = rectanglesList.find((r) =>
-    isItemInsideRectangle({ x, y, width: 1, height: 1 }, r),
-  );
-
-  const parentId = targetRectangle ? targetRectangle.id : null;
-
-  let newItem = null;
-
-  if (existingItem) {
-    droppedItems.update((items) =>
-      items.map((item) =>
-        item.id === existingItem.id
-          ? {
-              ...item,
-              x: parentId ? x : item.x, // Set absolute x
-              y: parentId ? y : item.y, // Set absolute y
-              parentId,
-            }
-          : item,
-      ),
+    const rectanglesList = get(rectangles);
+    const targetRectangle = rectanglesList.find((r) =>
+      isItemInsideRectangle({ x, y, width: 1, height: 1 }, r),
     );
-  } else {
-    newItem = {
-      id: nextId++,
-      ...droppedData,
-      x,
-      y,
-      parentId,
-    };
-    droppedItems.update((items) => [...items, newItem]);
-  }
 
-  const itemId = existingItem ? existingItem.id : newItem?.id;
-  if (itemId) {
-    updateRectangleMemberships(itemId);
-  }
-}
+    const parentId = targetRectangle ? targetRectangle.id : null;
 
+    let newItem = null;
+
+    if (existingItem) {
+      droppedItems.update((items) =>
+        items.map((item) =>
+          item.id === existingItem.id
+            ? {
+                ...item,
+                x: parentId ? x : item.x, // Set absolute x
+                y: parentId ? y : item.y, // Set absolute y
+                parentId,
+              }
+            : item,
+        ),
+      );
+    } else {
+      newItem = {
+        id: nextId++,
+        ...droppedData,
+        x,
+        y,
+        parentId,
+      };
+      droppedItems.update((items) => [...items, newItem]);
+    }
+
+    const itemId = existingItem ? existingItem.id : newItem?.id;
+    if (itemId) {
+      updateRectangleMemberships(itemId);
+    }
+  }
 
   onMount(() => {
     affinityDiagramArea.addEventListener('dragover', (e) => e.preventDefault());
@@ -479,30 +479,29 @@
   }
 
   function updateRectangleMemberships(itemId) {
-  const item = get(droppedItems).find((i) => i.id === itemId);
+    const item = get(droppedItems).find((i) => i.id === itemId);
 
-  rectangles.update((rects) =>
-    rects.map((rectangle) => {
-      const isInside = isItemInsideRectangle(item, rectangle);
-      const itemInRectangle = rectangle.items.some((i) => i.id === item.id);
+    rectangles.update((rects) =>
+      rects.map((rectangle) => {
+        const isInside = isItemInsideRectangle(item, rectangle);
+        const itemInRectangle = rectangle.items.some((i) => i.id === item.id);
 
-      if (isInside && !itemInRectangle) {
-        return {
-          ...rectangle,
-          items: [...rectangle.items, item],
-        };
-      } else if (!isInside && itemInRectangle) {
-        return {
-          ...rectangle,
-          items: rectangle.items.filter((i) => i.id !== item.id),
-        };
-      }
+        if (isInside && !itemInRectangle) {
+          return {
+            ...rectangle,
+            items: [...rectangle.items, item],
+          };
+        } else if (!isInside && itemInRectangle) {
+          return {
+            ...rectangle,
+            items: rectangle.items.filter((i) => i.id !== item.id),
+          };
+        }
 
-      return rectangle;
-    }),
-  );
-}
-
+        return rectangle;
+      }),
+    );
+  }
 
   function attachTextToRectangle(rectangleId) {
     const userText = prompt('Enter your hypothesis:');
@@ -528,6 +527,32 @@
     const element = event.target;
     element.style.height = 'auto';
     element.style.height = `${element.scrollHeight}px`;
+  }
+
+  // const exportMode = writable(false);
+  // export let selectedOption = writable('1');
+
+  // function toggleExportMode() {
+  //   exportMode.update((mode) => {
+  //     return !mode;
+  //   });
+  // }
+
+  import { exportedHypotheses } from '$lib/store';
+
+  function exportHypotheses() {
+    const hypotheses = get(rectangles).map((rectangle) => ({
+      id: rectangle.id,
+      text: rectangle.text || '', // Default to empty string if no text
+    }));
+
+    if (!hypotheses.length) {
+      alert('No hypotheses to export!');
+      return;
+    }
+
+    exportedHypotheses.set(hypotheses); // Save data in the store
+    goto('/post-questionnaire');
   }
 </script>
 
@@ -568,6 +593,7 @@
     <button on:click={zoomOut} class="btn btn-sm btn-secondary">Zoom Out</button>
     <button on:click={resetZoom} class="btn btn-sm btn-secondary">Reset</button>
   </div>
+  <button on:click={exportHypotheses} class="btn btn-sm btn-primary export-button"> Export </button>
 
   <!-- <button
     on:click={toggleSelectionMode}
@@ -603,6 +629,29 @@
     "
           on:pointerdown={(e) => onPointerDown(e, rectangle, 'rectangle')}
         >
+          <!-- {#if $exportMode}
+          <div class="dropdown dropdown-hover absolute top-1 right-1">
+            <div tabindex="0" class="btn btn-xs m-1">confidence: {$selectedOption}</div>
+            <ul tabindex="0" class="menu menu-xs dropdown-content bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
+              <li>
+                <a on:click={() => selectedOption.set('1')}>1</a>
+              </li>
+              <li>
+                <a on:click={() => selectedOption.set('2')}>2</a>
+              </li>
+              <li>
+                <a on:click={() => selectedOption.set('3')}>3</a>
+              </li>
+              <li>
+                <a on:click={() => selectedOption.set('4')}>4</a>
+              </li>
+              <li>
+                <a on:click={() => selectedOption.set('5')}>5</a>
+              </li>
+            </ul>
+          </div>
+          {/if} -->
+
           <div
             class="resize-handle top-left"
             on:pointerdown={(e) => startResizing(e, rectangle, 'top-left')}
@@ -628,56 +677,22 @@
             on:input={adjustHeight}
             on:pointerdown={(e) => e.stopPropagation()}
           ></textarea>
-
-          <!-- {#each rectangle.items as item (item.id)}
-          <div
-          class="dropped-item instax-style {isItemSelected(item) ? 'selected' : ''}"
-          style="
-            left: {item.x}px; 
-            top: {item.y}px; 
-            width: {item.width || 90}px;
-            height: {item.height || 'auto'};
-            position: absolute;
-            background: yellow;
-          "
-          on:pointerdown={(e) => onPointerDown(e, item, 'item')}
-        >
-          <button
-          class="btn btn-xs absolute top-1 right-1"
-          on:click={() => removeItem(item.id)}
-          style="color:red"
-        >
-          ×
-        </button>
-        {#if item.type === 'image-caption'}
-          <img src={item.src} alt="Dropped Image" />
-          <p>{item.caption}</p>
-        {/if}
-        {#if item.type === 'image'}
-          <img src={item.src} alt="Dropped Image" />
-        {/if}
-        {#if item.type === 'caption'}
-          <p>{item.text}</p>
-        {/if}
-          </div>
-        {/each} -->
-
           <span class="rect-info">Instances: {rectangle.items.length}</span>
         </div>
       {/each}
 
       {#each $droppedItems as item}
-      <div
-      class="dropped-item instax-style {isItemSelected(item) ? 'selected' : ''}"
-      style="
+        <div
+          class="dropped-item instax-style {isItemSelected(item) ? 'selected' : ''}"
+          style="
         left: {item.x}px;
         top: {item.y}px;
-        width: {item.width || 90}px;
+        width: {item.width || 100}px;
         height: {item.height || 'auto'};
         position: absolute;
       "
-      on:pointerdown={(e) => onPointerDown(e, item, 'item')}
-    >
+          on:pointerdown={(e) => onPointerDown(e, item, 'item')}
+        >
           <button
             class="btn btn-xs absolute top-1 right-1"
             on:click={() => removeItem(item.id)}
@@ -716,6 +731,23 @@
 <style>
   :global(body) {
     --box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .export-button {
+    position: absolute;
+    top: 50px;
+    left: 10px;
+    z-index: 100;
+  }
+
+  .dropdown {
+    position: absolute;
+    z-index: 3000;
+    display: inline-block;
+  }
+
+  .dropdown-content {
+    z-index: 30001;
   }
 
   .text-only-button {
@@ -802,8 +834,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    width: 90px;
-    padding: 5px;
+    padding: 7px;
     background-color: #fff;
     border: 1px solid #e6e6e6;
     border-radius: 8px;
@@ -822,14 +853,13 @@
   .dropped-item img {
     width: 100%;
     height: auto;
-    border-radius: 4px;
     margin-bottom: 3px;
   }
 
   .dropped-item p {
     font-size: 0.55rem;
     color: #444;
-    text-align: left;
+    text-align: center;
     margin: 0;
     padding: 1px;
     white-space: normal;
