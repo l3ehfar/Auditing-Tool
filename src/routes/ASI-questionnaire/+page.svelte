@@ -4,7 +4,7 @@
   import { notification } from '@marcellejs/core';
   import { writable } from 'svelte/store';
 
-  let timeLeft = 30;
+  let aSITimeLeft = 30;
   let totalQuestions = 22;
   let answeredQuestions = 0;
   let progress = 0;
@@ -12,20 +12,20 @@
   let disableinputs = false;
 
   let timerInterval: NodeJS.Timer;
-  let timeDisplay = writable(formatTime(timeLeft));
+  let timeDisplay = writable(formatTime(aSITimeLeft));
 
   onMount(() => {
-    const savedTime = parseInt(localStorage.getItem('timeLeft') || '30', 10);
+    const savedTime = parseInt(localStorage.getItem('aSITimeLeft') || '30', 10);
     const savedDisableState = localStorage.getItem('disableinputs') === 'true';
 
-    timeLeft = savedTime;
+    aSITimeLeft = savedTime;
     disableinputs = savedDisableState;
 
     if (!disableinputs) {
       startTimer();
     } else {
-      timeLeft = 0;
-      timeDisplay.set(formatTime(timeLeft));
+      aSITimeLeft = 0;
+      timeDisplay.set(formatTime(aSITimeLeft));
     }
   });
 
@@ -38,9 +38,9 @@
   function startTimer() {
     clearInterval(timerInterval); // Ensure no duplicate timers
     timerInterval = setInterval(() => {
-      if (timeLeft > 0) {
-        timeLeft -= 1;
-        timeDisplay.set(formatTime(timeLeft));
+      if (aSITimeLeft > 0) {
+        aSITimeLeft -= 1;
+        timeDisplay.set(formatTime(aSITimeLeft));
       } else {
         clearInterval(timerInterval);
         handleTimeout();
@@ -103,12 +103,12 @@
 
   function resetTimer() {
     clearInterval(timerInterval);
-    timeLeft = 30; // Reset to 30 seconds for testing
+    aSITimeLeft = 30; // Reset to 30 seconds for testing
     disableinputs = false;
-    localStorage.removeItem('timeLeft');
+    localStorage.removeItem('aSITimeLeft');
     localStorage.removeItem('disableinputs');
 
-    timeDisplay.set(formatTime(timeLeft));
+    timeDisplay.set(formatTime(aSITimeLeft));
     startTimer();
 
     const formControls = document.querySelectorAll('.form-control');

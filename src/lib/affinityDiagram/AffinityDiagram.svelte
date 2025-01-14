@@ -541,20 +541,25 @@
 
   let buttonAppreance = false;
 
-  let timeLeft = 10;
-  const timerDisplay = writable(timeLeft);
+  let overalltimeleft = 15;
+  const timerDisplay = writable(overalltimeleft);
 
   onMount(() => {
     // Start the timer
     const timer = setInterval(() => {
-      timeLeft -= 1;
-      timerDisplay.set(timeLeft);
+      overalltimeleft -= 1;
+      timerDisplay.set(overalltimeleft);
 
-      if (timeLeft === 5) {
+      if (overalltimeleft === 10) {
         buttonAppreance = true;
+        notification({
+          title: 'Time Reminder!',
+          message: 'You have 10 minutes to submit your results!',
+          duration: 5000,
+        });
       }
 
-      if (timeLeft <= 0) {
+      if (overalltimeleft <= 0) {
         clearInterval(timer);
 
         notification({
@@ -636,7 +641,6 @@
     <button on:click={zoomOut} class="btn btn-sm btn-secondary">Zoom Out</button>
     <button on:click={resetZoom} class="btn btn-sm btn-secondary">Reset</button>
   </div>
-
 
   {#if buttonAppreance}
     <button on:click={exportHypotheses} class="btn btn-sm btn-primary export-button">

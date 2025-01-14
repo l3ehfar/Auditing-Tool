@@ -3,7 +3,7 @@
   import { onMount } from 'svelte';
   import { notification } from '@marcellejs/core';
   
-  let timeLeft = 30;
+  let preQTimeLeft = 10;
   let totalQuestions = 4;
   let answeredQuestions = 0;
   let progress = 0;
@@ -13,17 +13,17 @@
   let timerInterval: NodeJS.Timer;
 
   onMount(() => {
-    const savedTime = parseInt(localStorage.getItem('timeLeft') || '30');
+    const savedTime = parseInt(localStorage.getItem('preQTimeLeft') || '10');
     const savedDisableState = localStorage.getItem('disableInputs') === 'true';
 
-    timeLeft = savedTime;
+    preQTimeLeft = savedTime;
     disableInputs = savedDisableState;
 
     if (!disableInputs) {
       timerInterval = setInterval(() => {
-        if (timeLeft > 0) {
-          timeLeft -= 1;
-          localStorage.setItem('timeLeft', timeLeft.toString());
+        if (preQTimeLeft > 0) {
+          preQTimeLeft -= 1;
+          localStorage.setItem('preQTimeLeft', preQTimeLeft.toString());
         } else {
           clearInterval(timerInterval);
 
@@ -111,9 +111,9 @@
 
   function resetTimer() {
     clearInterval(timerInterval);
-    timeLeft = 30;
+    preQTimeLeft = 10;
     disableInputs = false;
-    localStorage.removeItem('timeLeft');
+    localStorage.removeItem('preQTimeLeft');
     localStorage.removeItem('disableInputs');
 
     const selects = document.querySelectorAll('select');
@@ -122,9 +122,9 @@
     });
 
     timerInterval = setInterval(() => {
-      if (timeLeft > 0) {
-        timeLeft -= 1;
-        localStorage.setItem('timeLeft', timeLeft.toString());
+      if (preQTimeLeft > 0) {
+        preQTimeLeft -= 1;
+        localStorage.setItem('preQTimeLeft', preQTimeLeft.toString());
       } else {
         clearInterval(timerInterval);
 
@@ -157,7 +157,7 @@
     </div>
 
     <div class="flex justify-between items-center mb-6">
-      <p>Time left: {timeLeft} seconds</p>
+      <p>Time left: {preQTimeLeft} seconds</p>
       <!-- <p>Progress: {Math.round(progress)}%</p> -->
       <button on:click={resetTimer} class="btn btn-secondary ml-4">Reset Timer</button>
     </div>
