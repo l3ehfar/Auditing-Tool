@@ -5,6 +5,35 @@
   import { faMagnifyingGlassMinus, faMagnifyingGlassPlus } from '$lib/icons';
   import { zoomLevelStore } from '$lib/store';
   import { derived } from 'svelte/store';
+  import { writable } from 'svelte/store';
+
+  let timeLeft = 300;
+  let timerInterval;
+
+  function formatTime(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds
+      .toString()
+      .padStart(2, '0')}`;
+  }
+
+  let timeDisplay = writable(formatTime(timeLeft));
+
+
+  function startTimer() {
+    timerInterval = setInterval(() => {
+      timeLeft -= 1;
+      timeDisplay.set(formatTime(timeLeft));
+
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+      }
+    }, 1000);
+  }
+
+
+  startTimer();
 
   // let showDatasetWindow: boolean = false;
   let zoomLevel: number = 1;
@@ -58,6 +87,10 @@
       > -->
         <!-- <div class="selector" use:marcelle={selectClass}></div> -->
       <!-- </div> -->
+      <div class="timer-display">
+        Timer: {$timeDisplay}
+      </div>
+
       <div class="right-tools">
         <button class="icon" on:click={zoomOut}>
           <FontAwesomeIcon icon={faMagnifyingGlassMinus} />
@@ -175,6 +208,14 @@
 
   .selector {
     margin-top: 0;
+  }
+
+  .timer-display {
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
 
   /* .btn {

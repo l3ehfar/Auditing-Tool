@@ -1,17 +1,17 @@
 <script lang="ts">
-  import { page } from '$app/stores'; // Import the page store
+  import { page } from '$app/stores'; 
   import Dataset from '$lib/dataset/Dataset.svelte';
   import AffinityDiagram from '$lib/affinityDiagram/AffinityDiagram.svelte';
   import './styles.css';
   import "tailwindcss/tailwind.css";
 
   let currentRoute = '';
-  $: currentRoute = $page.url.pathname; // Reactively update the current route
+  $: currentRoute = $page.url.pathname; 
 </script>
 
 <div class="layout-container">
-  {#if currentRoute !== '/post-questionnaire'}
-    <!-- Top Section -->
+  {#if currentRoute !== '/post-questionnaire'  && currentRoute !== '/pre-questionnaire' && currentRoute !== '/ASI-questionnaire'}
+   
     <div class="top-section">
       <div class="fixed">
         <Dataset />
@@ -20,12 +20,12 @@
         <slot />
       </div>
     </div>
-    <!-- Bottom Section -->
+  
     <div class="bottom-section">
       <AffinityDiagram />
     </div>
   {:else}
-    <!-- Only render the routed content for /post-questionnaire -->
+
     <div class="routed-full">
       <slot />
     </div>

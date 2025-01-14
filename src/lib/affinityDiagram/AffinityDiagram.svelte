@@ -5,6 +5,8 @@
   import { faMousePointer, faObjectGroup, faComment } from '@fortawesome/free-solid-svg-icons';
   import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
   import { goto } from '$app/navigation';
+  import { exportedHypotheses } from '$lib/store';
+  import { notification } from '@marcellejs/core';
 
   let affinityDiagramArea;
 
@@ -427,10 +429,9 @@
   }
 
   function createTextRectangle() {
-    const zoom = get(zoomLevel); // Get the current zoom level
-    const offset = get(panOffset); // Get the current pan offset
+    const zoom = get(zoomLevel);
+    const offset = get(panOffset);
 
-    // Use zoom and offset to determine the rectangle's position
     const x = 100 / zoom - offset.x / zoom;
     const y = 100 / zoom - offset.y / zoom;
 
@@ -538,20 +539,62 @@
   //   });
   // }
 
-  import { exportedHypotheses } from '$lib/store';
+  let buttonAppreance = false;
+
+  let timeLeft = 10;
+  const timerDisplay = writable(timeLeft);
+
+  onMount(() => {
+    // Start the timer
+    const timer = setInterval(() => {
+      timeLeft -= 1;
+      timerDisplay.set(timeLeft);
+
+      if (timeLeft === 5) {
+        buttonAppreance = true;
+      }
+
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+
+        notification({
+          title: 'Session Finished',
+          message: 'Please proceed to the next page.',
+          duration: 5000,
+        });
+
+        setTimeout(() => {
+          goto('/post-questionnaire');
+        }, 5000);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer); // Cleanup timer on unmount
+  });
 
   function exportHypotheses() {
     const hypotheses = get(rectangles).map((rectangle) => ({
       id: rectangle.id,
-      text: rectangle.text || '', // Default to empty string if no text
+      text: rectangle.text || '',
     }));
 
     if (!hypotheses.length) {
-      alert('No hypotheses to export!');
+      notification({
+        title: 'Export Failed',
+        message: 'No hypotheses to export!',
+        duration: 3000,
+        type: 'danger',
+      });
       return;
     }
 
-    exportedHypotheses.set(hypotheses); // Save data in the store
+    notification({
+      title: 'Hypotheses Exported',
+      message: 'Your hypotheses have been successfully submitted.',
+      duration: 3000,
+    });
+
+    exportedHypotheses.set(hypotheses);
     goto('/post-questionnaire');
   }
 </script>
@@ -593,8 +636,13 @@
     <button on:click={zoomOut} class="btn btn-sm btn-secondary">Zoom Out</button>
     <button on:click={resetZoom} class="btn btn-sm btn-secondary">Reset</button>
   </div>
-  <button on:click={exportHypotheses} class="btn btn-sm btn-primary export-button"> Export </button>
 
+
+  {#if buttonAppreance}
+    <button on:click={exportHypotheses} class="btn btn-sm btn-primary export-button">
+      Submit Results
+    </button>
+  {/if}
   <!-- <button
     on:click={toggleSelectionMode}
     class="btn btn-sm btn-secondary selection-mode-button"
@@ -731,6 +779,18 @@
 <style>
   :global(body) {
     --box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .timer-display {
+    position: absolute;
+    top: 50px;
+    right: 10px;
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 0.7rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 10;
   }
 
   .export-button {

@@ -24,55 +24,57 @@
                 <p class="mb-6">{text}</p>
                 <form class="questionnaire space-y-4">
                   <div class="form-control">
-                    <label class="label font-medium text-sm">
-                      How confident are you about this hypothesis?
-                    </label>
-                    <select name="confidence-{id}" class="select select-xs select-bordered">
-                      <option value="1">1: Very uncertain</option>
-                      <option value="2">2: Uncertain</option>
-                      <option value="3">3: Neutral</option>
-                      <option value="4">4: Confident</option>
-                      <option value="5">5: Very confident</option>
-                    </select>
+                    <label class="label font-medium text-sm"
+                      >How confident are you about this hypothesis?
+                      </label
+                    >
+                    <div class="likert-scale flex justify-between">
+                      <label><input type="radio" name="confidence-{id}" value="1"/> Very Uncertain</label>
+                      <label><input type="radio" name="confidence-{id}" value="2"/> Uncertain</label>
+                      <label><input type="radio" name="confidence-{id}" value="3"/> Neutral</label>
+                      <label><input type="radio" name="confidence-{id}" value="4"/> Confident</label>
+                      <label><input type="radio" name="confidence-{id}" value="5"/> Very Confident</label>
+                    </div>
                   </div>
   
                   <div class="form-control">
                     <label class="label font-medium text-sm">
-                      Did you find counterexamples to your hypothesis?
+                      Did you find any examples that go against your hypothesis? (e.g. cases where your hypothesis doesn't hold true.)
                     </label>
-                    <select name="counterexamples-{id}" class="select select-xs select-bordered">
-                      <option value="1">1: No counterexamples</option>
-                      <option value="2">2: 1–2 counterexamples</option>
-                      <option value="3">3: 3–5 counterexamples</option>
-                      <option value="4">4: 6–9 counterexamples</option>
-                      <option value="5">5: 10 or more counterexamples</option>
-                    </select>
+                    <div class="radio-options flex space-x-4">
+                      <label>
+                        <input type="radio" name="counterexamples-{id}" value="yes" /> Yes
+                      </label>
+                      <label>
+                        <input type="radio" name="counterexamples-{id}" value="no" /> No
+                      </label>
+                    </div>
                   </div>
   
                   <div class="form-control">
                     <label class="label font-medium text-sm">
                       How often does the bias described in your hypothesis occur?
                     </label>
-                    <select name="frequency-{id}" class="select select-xs select-bordered">
-                      <option value="1">1: Never</option>
-                      <option value="2">2: Rarely</option>
-                      <option value="3">3: Sometimes</option>
-                      <option value="4">4: Often</option>
-                      <option value="5">5: All the time</option>
-                    </select>
+                    <div class="likert-scale flex justify-between">
+                      <label><input type="radio" name="frequency-{id}" value="1"/> Never</label>
+                      <label><input type="radio" name="frequency-{id}" value="2"/> Rarely</label>
+                      <label><input type="radio" name="frequency-{id}" value="3"/> Sometimes</label>
+                      <label><input type="radio" name="frequency-{id}" value="4"/> Often</label>
+                      <label><input type="radio" name="frequency-{id}" value="5"/> Always</label>
+                    </div>
                   </div>
-  
+
                   <div class="form-control">
                     <label class="label font-medium text-sm">
                       How problematic is the bias described in your hypothesis?
                     </label>
-                    <select name="problematic-{id}" class="select select-xs select-bordered">
-                      <option value="1">1: Not problematic</option>
-                      <option value="2">2: Slightly problematic</option>
-                      <option value="3">3: Somewhat problematic</option>
-                      <option value="4">4: Problematic</option>
-                      <option value="5">5: Very problematic</option>
-                    </select>
+                    <div class="likert-scale flex justify-between">
+                      <label><input type="radio" name="problematic-{id}" value="1"/> Not problematic</label>
+                      <label><input type="radio" name="problematic-{id}" value="2"/> Slightly problematic</label>
+                      <label><input type="radio" name="problematic-{id}" value="3"/> Somewhat problematic</label>
+                      <label><input type="radio" name="problematic-{id}" value="4"/> problematic</label>
+                      <label><input type="radio" name="problematic-{id}" value="5"/> Very problematic</label>
+                    </div>
                   </div>
   
                   <div class="form-control">
@@ -227,5 +229,34 @@
       flex: none;
       scroll-snap-align: start;
     }
+
+    .likert-scale label {
+    display: inline-block;
+    text-align: center;
+    width: 14%;
+    font-size: 0.7rem;
+  }
+
+  .likert-scale input {
+    margin: 0 auto;
+    display: block;
+  }
+
+  .form-control {
+    text-align: left;
+  }
+
+  .likert-scale span {
+    width: 20%;
+    text-align: center;
+    font-size: 0.7rem;
+  }
+
+  .radio-options label {
+    display: inline-block;
+    text-align: center;
+    width: 14%;
+    font-size: 0.7rem;
+  }
   </style>
   
