@@ -539,48 +539,106 @@
   //   });
   // }
 
+  function resetAffinityDiagram() {
+    rectangles.set([]);
+    droppedItems.set([]);
+
+    localStorage.removeItem('affinityDiagramRectangles');
+    localStorage.removeItem('affinityDiagramDroppedItems');
+  }
+
   let buttonAppreance = false;
 
-  let overalltimeleft = 15;
+  let overalltimeleft = 30;
   const timerDisplay = writable(overalltimeleft);
 
-  onMount(() => {
-    // Start the timer
-    const timer = setInterval(() => {
+  function saveTimerState() {
+  localStorage.setItem('affinityDiagramTimer', JSON.stringify(overalltimeleft));
+  localStorage.setItem('buttonAppearance', JSON.stringify(buttonAppreance));
+}
+
+function loadTimerState() {
+  const savedTime = localStorage.getItem('affinityDiagramTimer');
+  const savedButtonAppearance = localStorage.getItem('buttonAppearance');
+  return {
+    time: savedTime ? JSON.parse(savedTime) : null,
+    buttonAppeared: savedButtonAppearance ? JSON.parse(savedButtonAppearance) : false,
+  };
+}
+
+onMount(() => {
+  const { time, buttonAppeared } = loadTimerState();
+
+  if (time !== null && time > 0) {
+    overalltimeleft = time;
+    timerDisplay.set(overalltimeleft);
+  }
+
+  buttonAppreance = buttonAppeared;
+
+  if (overalltimeleft <= 0) {
+    notification({
+      title: 'Session Finished',
+      message: 'Please proceed to the next page.',
+      duration: 5000,
+    });
+    return;
+  }
+
+  const timer = setInterval(() => {
+    if (overalltimeleft > 0) {
       overalltimeleft -= 1;
       timerDisplay.set(overalltimeleft);
 
-      if (overalltimeleft === 10) {
+      if (overalltimeleft === 10 && !buttonAppreance) {
         buttonAppreance = true;
         notification({
           title: 'Time Reminder!',
           message: 'You have 10 minutes to submit your results!',
           duration: 5000,
         });
+        saveTimerState(); 
       }
 
-      if (overalltimeleft <= 0) {
-        clearInterval(timer);
+      saveTimerState();
+    } else {
+      clearInterval(timer);
+      overalltimeleft = 0; 
+      timerDisplay.set(overalltimeleft);
+      saveTimerState();
 
-        notification({
-          title: 'Session Finished',
-          message: 'Please proceed to the next page.',
-          duration: 5000,
-        });
+      notification({
+        title: 'Session Finished',
+        message: 'Please proceed to the next page.',
+        duration: 5000,
+      });
 
-        setTimeout(() => {
-          goto('/post-questionnaire');
-        }, 5000);
-      }
-    }, 1000);
+      setTimeout(() => {
+        // goto('/post-questionnaire');
+      }, 5000);
+    }
+  }, 1000);
 
-    return () => clearInterval(timer); // Cleanup timer on unmount
-  });
+  return () => clearInterval(timer);
+});
 
   function exportHypotheses() {
     const hypotheses = get(rectangles).map((rectangle) => ({
       id: rectangle.id,
       text: rectangle.text || '',
+      items: rectangle.items.map((item) => ({
+        id: item.id,
+        type: item.type,
+        src: item.src || null,
+        caption: item.caption || null,
+        text: item.text || null,
+        x: item.x,
+        y: item.y,
+      })),
+      x: rectangle.x,
+      y: rectangle.y,
+      width: rectangle.width,
+      height: rectangle.height,
     }));
 
     if (!hypotheses.length) {
@@ -593,15 +651,86 @@
       return;
     }
 
+    saveState();
+
+    const hypothesesTexts = hypotheses
+      .filter((rectangle) => rectangle.text?.trim() !== '') // Only export if text exists
+      .map((rectangle) => ({
+        id: rectangle.id,
+        text: rectangle.text.trim(),
+      }));
+
+    // Save the hypotheses to the exportedHypotheses store
+    exportedHypotheses.set(hypothesesTexts);
+
+    console.log('Exported Hypotheses:', hypotheses);
     notification({
       title: 'Hypotheses Exported',
       message: 'Your hypotheses have been successfully submitted.',
       duration: 3000,
     });
 
-    exportedHypotheses.set(hypotheses);
     goto('/post-questionnaire');
   }
+
+  const RECTANGLES_STORAGE_KEY = 'affinityDiagramRectangles';
+  const DROPPED_ITEMS_STORAGE_KEY = 'affinityDiagramDroppedItems';
+
+  function saveState() {
+    localStorage.setItem('affinityDiagramRectangles', JSON.stringify(get(rectangles)));
+    localStorage.setItem('affinityDiagramDroppedItems', JSON.stringify(get(droppedItems)));
+  }
+
+  export function resetData() {
+    rectangles.set([]);
+    droppedItems.set([]);
+
+    localStorage.removeItem(RECTANGLES_STORAGE_KEY);
+    localStorage.removeItem(DROPPED_ITEMS_STORAGE_KEY);
+
+    console.log('Data has been reset for a new user.');
+  }
+
+  function loadState() {
+    const savedRectangles = localStorage.getItem(RECTANGLES_STORAGE_KEY);
+    const savedDroppedItems = localStorage.getItem(DROPPED_ITEMS_STORAGE_KEY);
+
+    if (savedRectangles) {
+      rectangles.set(JSON.parse(savedRectangles));
+    }
+    if (savedDroppedItems) {
+      droppedItems.set(JSON.parse(savedDroppedItems));
+    }
+  }
+
+  onMount(() => {
+    const userId = localStorage.getItem('userId');
+
+    if (userId) {
+      const savedRectangles = localStorage.getItem('affinityDiagramRectangles');
+      const savedDroppedItems = localStorage.getItem('affinityDiagramDroppedItems');
+
+      if (savedRectangles) {
+        rectangles.set(JSON.parse(savedRectangles));
+      } else {
+        rectangles.set([]);
+      }
+
+      if (savedDroppedItems) {
+        droppedItems.set(JSON.parse(savedDroppedItems));
+      } else {
+        droppedItems.set([]);
+      }
+    } else {
+      resetAffinityDiagram();
+    }
+
+    window.addEventListener('beforeunload', saveState);
+
+    return () => {
+      window.removeEventListener('beforeunload', saveState);
+    };
+  });
 </script>
 
 <div

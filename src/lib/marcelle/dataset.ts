@@ -15,7 +15,7 @@ import { datasetExplorer } from './components';
 import { huggingfaceModel } from './components';
 import { writable } from 'svelte/store';
 
-const store = dataStore('http://localhost:3030');
+export const store = dataStore('http://localhost:3030');
 
 export let dynamicClassLabel = writable('all');
 

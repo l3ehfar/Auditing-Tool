@@ -18,6 +18,11 @@
   },
   "dependencies": {
     "@dgmjs/core": "^0.31.2",
+    "@feathersjs/authentication": "^5.0.31",
+    "@feathersjs/authentication-client": "^5.0.31",
+    "@feathersjs/authentication-local": "^5.0.31",
+    "@feathersjs/feathers": "^5.0.31",
+    "@feathersjs/rest-client": "^5.0.31",
     "@fortawesome/fontawesome-svg-core": "^6.6.0",
     "@fortawesome/free-brands-svg-icons": "^6.6.0",
     "@fortawesome/free-solid-svg-icons": "^6.6.0",

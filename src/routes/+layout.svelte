@@ -10,7 +10,7 @@
 </script>
 
 <div class="layout-container">
-  {#if currentRoute !== '/post-questionnaire'  && currentRoute !== '/pre-questionnaire' && currentRoute !== '/ASI-questionnaire'}
+  {#if currentRoute !== '/post-questionnaire'  && currentRoute !== '/pre-questionnaire' && currentRoute !== '/ASI-questionnaire' && currentRoute !== '/auth/signup' && currentRoute !== '/auth/login'}
    
     <div class="top-section">
       <div class="fixed">
