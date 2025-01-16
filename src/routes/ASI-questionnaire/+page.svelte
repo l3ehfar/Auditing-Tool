@@ -5,7 +5,7 @@
   import { writable } from 'svelte/store';
 
   let aSITimeLeft = 30;
-  let totalQuestions = 22;
+  let totalQuestions = 4;
   let answeredQuestions = 0;
   let progress = 0;
   let canSubmit = false;
@@ -15,19 +15,61 @@
   let timeDisplay = writable(formatTime(aSITimeLeft));
 
   onMount(() => {
-    const savedTime = parseInt(localStorage.getItem('aSITimeLeft') || '30', 10);
-    const savedDisableState = localStorage.getItem('disableinputs') === 'true';
+    const userId = localStorage.getItem('userId');
+    const lastUserId = localStorage.getItem('lastUserId');
 
-    aSITimeLeft = savedTime;
-    disableinputs = savedDisableState;
+    if (!userId) {
+      console.warn('No user ID found. Redirecting to signup...');
+      goto('/auth/signup');
+      return;
+    }
+
+    if (userId !== lastUserId) {
+      console.log('New user detected. Resetting ASI questionnaire.');
+      aSITimeLeft = 30;
+      disableinputs = false;
+      localStorage.removeItem('aSITimeLeft');
+      localStorage.removeItem('disableinputs');
+      localStorage.setItem('lastUserId', userId);
+    } else {
+      const savedTime = parseInt(localStorage.getItem('aSITimeLeft') || '30', 10);
+      const savedDisableState = localStorage.getItem('disableinputs') === 'true';
+      aSITimeLeft = savedTime;
+      disableinputs = savedDisableState;
+    }
+
+    timeDisplay.set(formatTime(aSITimeLeft));
 
     if (!disableinputs) {
       startTimer();
     } else {
-      aSITimeLeft = 0;
-      timeDisplay.set(formatTime(aSITimeLeft));
+      console.log('Inputs are disabled due to previous completion.');
+      updateInputState(disableinputs);
     }
+
+    loadUserResponses(userId); // Load saved responses
   });
+
+  function loadUserResponses(userId: string) {
+    const savedResponses = JSON.parse(localStorage.getItem(`ASI-${userId}`) || '{}');
+    console.log('Loaded ASI responses:', savedResponses);
+
+    Object.entries(savedResponses).forEach(([name, value]) => {
+      const radio = document.querySelector(
+        `input[name="${name}"][value="${value}"]`,
+      ) as HTMLInputElement;
+      if (radio) radio.checked = true;
+    });
+
+    checkProgress(); // Update progress after loading saved responses
+  }
+
+  function updateInputState(isDisabled: boolean) {
+    const radios = document.querySelectorAll('form input[type="radio"]');
+    radios.forEach((radio: HTMLInputElement) => {
+      radio.disabled = isDisabled;
+    });
+  }
 
   function formatTime(seconds: number): string {
     const minutes = Math.floor(seconds / 60);
@@ -40,6 +82,7 @@
     timerInterval = setInterval(() => {
       if (aSITimeLeft > 0) {
         aSITimeLeft -= 1;
+        localStorage.setItem('aSITimeLeft', aSITimeLeft.toString()); // Save the remaining time
         timeDisplay.set(formatTime(aSITimeLeft));
       } else {
         clearInterval(timerInterval);
@@ -47,6 +90,7 @@
       }
     }, 1000);
   }
+
   function handleTimeout() {
     const unansweredQuestions = highlightUnansweredQuestions();
 
@@ -59,8 +103,10 @@
       });
     } else {
       disableinputs = true;
+      localStorage.setItem('disableinputs', 'true');
+      updateInputState(disableinputs);
       setTimeout(() => {
-        captureASI();
+        // captureASI();
       }, 2000);
     }
   }
@@ -97,6 +143,21 @@
   }
 
   function captureASI() {
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      console.error('User ID is missing. Cannot save responses.');
+      return;
+    }
+
+    const responses = {};
+    const radios = document.querySelectorAll('form input[type="radio"]:checked');
+    radios.forEach((radio: HTMLInputElement) => {
+      responses[radio.name] = radio.value;
+    });
+
+    localStorage.setItem(`ASI-${userId}`, JSON.stringify(responses));
+    console.log('Saved ASI responses:', responses);
+
     clearInterval(timerInterval);
     goto('/conditionOne');
   }
@@ -105,8 +166,8 @@
     clearInterval(timerInterval);
     aSITimeLeft = 30; // Reset to 30 seconds for testing
     disableinputs = false;
-    localStorage.removeItem('aSITimeLeft');
-    localStorage.removeItem('disableinputs');
+    localStorage.setItem('aSITimeLeft', aSITimeLeft.toString());
+    localStorage.setItem('disableinputs', 'false');
 
     timeDisplay.set(formatTime(aSITimeLeft));
     startTimer();
@@ -140,7 +201,6 @@
     progress = (answeredQuestions / totalQuestions) * 100;
     canSubmit = answeredQuestions === totalQuestions;
   }
-
 </script>
 
 <div class="bg-base-100 min-h-screen p-4 flex items-center justify-center">
@@ -153,7 +213,7 @@
         </div>
         <div class="flex justify-between items-center mb-6">
           <p>Time left: {$timeDisplay}</p>
-          <button on:click={resetTimer} class="btn btn-secondary ml-4">Reset Timer</button>
+          <!-- <button on:click={resetTimer} class="btn btn-secondary ml-4">Reset Timer</button> -->
         </div>
       </div>
       <h2 class="text-sm font-semibold mb-6">
@@ -225,7 +285,7 @@
               <span>Agree strongly</span>
             </div>
           </div>
-          <div class="form-control">
+          <!-- <div class="form-control">
             <label class="label font-medium text-sm">5. Women are too easily offended. </label>
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
@@ -497,7 +557,7 @@
             <label><input type="radio" name="q22" value="5" disabled={disableinputs} /> 5</label>
             <span>Agree strongly</span>
           </div>
-        </div>
+        </div> -->
       </form>
     </div>
     <div class="text-center mt-8">

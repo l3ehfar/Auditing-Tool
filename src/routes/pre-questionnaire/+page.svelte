@@ -2,7 +2,7 @@
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import { notification } from '@marcellejs/core';
-  
+
   let preQTimeLeft = 10;
   let totalQuestions = 4;
   let answeredQuestions = 0;
@@ -12,12 +12,73 @@
 
   let timerInterval: NodeJS.Timer;
 
-  onMount(() => {
-    const savedTime = parseInt(localStorage.getItem('preQTimeLeft') || '10');
-    const savedDisableState = localStorage.getItem('disableInputs') === 'true';
+  async function loadUserData(userId: string) {
+    try {
+      const savedData = JSON.parse(localStorage.getItem(`preQuestionnaire-${userId}`) || '{}');
+      console.log('Loaded user data:', savedData);
 
-    preQTimeLeft = savedTime;
-    disableInputs = savedDisableState;
+      if (savedData.education) {
+        const educationSelect = document.querySelector('[name="accuracy"]') as HTMLSelectElement;
+        educationSelect.value = savedData.education;
+      }
+      if (savedData.field) {
+        const fieldSelect = document.querySelector('[name="understanding"]') as HTMLSelectElement;
+        fieldSelect.value = savedData.field;
+      }
+      if (savedData.mlFamiliarity) {
+        const mlFamiliaritySelect = document.querySelector(
+          '[name="intuitive"]',
+        ) as HTMLSelectElement;
+        mlFamiliaritySelect.value = savedData.mlFamiliarity;
+      }
+      if (savedData.imageCaptioning) {
+        const imageCaptioningSelect = document.querySelector(
+          '[name="effort"]',
+        ) as HTMLSelectElement;
+        imageCaptioningSelect.value = savedData.imageCaptioning;
+      }
+
+      checkProgress();
+    } catch (err) {
+      console.error('Error loading user data:', err);
+    }
+  }
+
+  onMount(() => {
+    const userId = localStorage.getItem('userId');
+    const lastUserId = localStorage.getItem('lastUserId');
+
+    if (!userId) {
+      console.warn('No user ID found. Redirecting to signup for testing...');
+      goto('/auth/signup');
+      return;
+    }
+
+    console.log('Logged-in user ID:', userId);
+
+    if (userId !== lastUserId) {
+      console.log('New user detected. Resetting timer and states.');
+      preQTimeLeft = 10;
+      disableInputs = false;
+
+      localStorage.removeItem('preQTimeLeft');
+      localStorage.removeItem('disableInputs');
+
+      localStorage.setItem('lastUserId', userId);
+    } else {
+      console.log('Returning user detected. Loading saved data.');
+      const savedTime = parseInt(localStorage.getItem('preQTimeLeft') || '10');
+      const savedDisableState = localStorage.getItem('disableInputs') === 'true';
+
+      preQTimeLeft = savedTime;
+      disableInputs = savedDisableState;
+    }
+
+    loadUserData(userId);
+
+    if (disableInputs) {
+      console.log('Disabling inputs as the questionnaire is already completed.');
+    }
 
     if (!disableInputs) {
       timerInterval = setInterval(() => {
@@ -34,13 +95,12 @@
               title: 'Error',
               message: 'Please answer all questions before time runs out.',
               duration: 5000,
-              type: 'danger'
+              type: 'danger',
             });
           } else {
-            
             disableInputs = true;
             localStorage.setItem('disableInputs', 'true');
-            captureDemographics();
+            // captureDemographics();
           }
         }
       }, 1000);
@@ -72,7 +132,7 @@
       }
     });
 
-    progress = (answeredQuestions / totalQuestions) * 100; 
+    progress = (answeredQuestions / totalQuestions) * 100;
     canSubmit = answeredQuestions === totalQuestions;
   }
 
@@ -105,7 +165,14 @@
       formData['imageCaptioning'] = imageCaptioningSelect.value;
     }
 
-    console.log('Captured Data:', formData);
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+      localStorage.setItem(`preQuestionnaire-${userId}`, JSON.stringify(formData));
+      console.log('Saved pre-questionnaire data:', formData);
+    } else {
+      console.error('Cannot save data: User ID is missing.');
+    }
+
     goto('/ASI-questionnaire');
   }
 
@@ -118,7 +185,7 @@
 
     const selects = document.querySelectorAll('select');
     selects.forEach((select) => {
-      (select as HTMLSelectElement).style.border = ''; 
+      (select as HTMLSelectElement).style.border = '';
     });
 
     timerInterval = setInterval(() => {
@@ -128,16 +195,15 @@
       } else {
         clearInterval(timerInterval);
 
-        
         const unansweredQuestions = highlightUnansweredQuestions();
 
         if (unansweredQuestions.length > 0) {
           notification({
-              title: 'Error',
-              message: 'Please answer all questions before time runs out.',
-              duration: 5000,
-              type: 'danger'
-            });
+            title: 'Error',
+            message: 'Please answer all questions before time runs out.',
+            duration: 5000,
+            type: 'danger',
+          });
         } else {
           disableInputs = true;
           localStorage.setItem('disableInputs', 'true');
@@ -159,7 +225,7 @@
     <div class="flex justify-between items-center mb-6">
       <p>Time left: {preQTimeLeft} seconds</p>
       <!-- <p>Progress: {Math.round(progress)}%</p> -->
-      <button on:click={resetTimer} class="btn btn-secondary ml-4">Reset Timer</button>
+      <!-- <button on:click={resetTimer} class="btn btn-secondary ml-4">Reset Timer</button> -->
     </div>
 
     <div class="flex flex-wrap space-x-6">
