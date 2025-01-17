@@ -590,8 +590,8 @@ onMount(() => {
       overalltimeleft -= 1;
       timerDisplay.set(overalltimeleft);
 
-      if (overalltimeleft === 10 && !buttonAppreance) {
-        buttonAppreance = true;
+      if (overalltimeleft === 10) {
+        
         notification({
           title: 'Time Reminder!',
           message: 'You have 10 minutes to submit your results!',
@@ -601,12 +601,13 @@ onMount(() => {
       }
 
       saveTimerState();
-    } else {
+    } 
+    if (overalltimeleft<=0) {
+      buttonAppreance = true;
       clearInterval(timer);
       overalltimeleft = 0; 
       timerDisplay.set(overalltimeleft);
       saveTimerState();
-
       notification({
         title: 'Session Finished',
         message: 'Please proceed to the next page.',

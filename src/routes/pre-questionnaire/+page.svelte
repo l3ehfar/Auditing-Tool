@@ -47,6 +47,7 @@
   onMount(() => {
     const userId = localStorage.getItem('userId');
     const lastUserId = localStorage.getItem('lastUserId');
+    const alreadySubmitted = localStorage.getItem(`preQuestionnaireSubmitted-${userId}`) === 'true';
 
     if (!userId) {
       console.warn('No user ID found. Redirecting to signup for testing...');
@@ -55,6 +56,13 @@
     }
 
     console.log('Logged-in user ID:', userId);
+
+    // Redirect if the form is already submitted
+    if (alreadySubmitted) {
+      console.log('Questionnaire already submitted. Redirecting...');
+      goto('/ASI-questionnaire');
+      return;
+    }
 
     if (userId !== lastUserId) {
       console.log('New user detected. Resetting timer and states.');
@@ -76,10 +84,6 @@
 
     loadUserData(userId);
 
-    if (disableInputs) {
-      console.log('Disabling inputs as the questionnaire is already completed.');
-    }
-
     if (!disableInputs) {
       timerInterval = setInterval(() => {
         if (preQTimeLeft > 0) {
@@ -97,10 +101,6 @@
               duration: 5000,
               type: 'danger',
             });
-          } else {
-            disableInputs = true;
-            localStorage.setItem('disableInputs', 'true');
-            // captureDemographics();
           }
         }
       }, 1000);
@@ -168,20 +168,18 @@
     const userId = localStorage.getItem('userId');
     if (userId) {
       localStorage.setItem(`preQuestionnaire-${userId}`, JSON.stringify(formData));
-      console.log('Saved pre-questionnaire data:', formData);
+      localStorage.setItem(`preQuestionnaireSubmitted-${userId}`, 'true'); // Mark as submitted
+      console.log('Saved pre-questionnaire data and marked as submitted:', formData);
     } else {
       console.error('Cannot save data: User ID is missing.');
     }
 
-    goto('/ASI-questionnaire');
+    goto('/ASI-questionnaire'); // Redirect after successful submission
   }
-
+  
   function resetTimer() {
     clearInterval(timerInterval);
     preQTimeLeft = 10;
-    disableInputs = false;
-    localStorage.removeItem('preQTimeLeft');
-    localStorage.removeItem('disableInputs');
 
     const selects = document.querySelectorAll('select');
     selects.forEach((select) => {
@@ -204,15 +202,12 @@
             duration: 5000,
             type: 'danger',
           });
-        } else {
-          disableInputs = true;
-          localStorage.setItem('disableInputs', 'true');
-          captureDemographics();
         }
       }
     }, 1000);
   }
 </script>
+
 
 <div class="bg-base-100 min-h-screen p-4">
   <div class="container mx-auto">
@@ -222,11 +217,11 @@
       <div class="bg-blue-500 h-4 rounded-full transition-all" style="width: {progress}%"></div>
     </div>
 
-    <div class="flex justify-between items-center mb-6">
+    <!-- <div class="flex justify-between items-center mb-6">
       <p>Time left: {preQTimeLeft} seconds</p>
-      <!-- <p>Progress: {Math.round(progress)}%</p> -->
-      <!-- <button on:click={resetTimer} class="btn btn-secondary ml-4">Reset Timer</button> -->
-    </div>
+       <p>Progress: {Math.round(progress)}%</p> 
+      <button on:click={resetTimer} class="btn btn-secondary ml-4">Reset Timer</button>
+    </div> -->
 
     <div class="flex flex-wrap space-x-6">
       <section class="bg-white shadow-lg rounded-lg p-8 flex-1">

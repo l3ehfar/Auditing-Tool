@@ -33,8 +33,8 @@
       localStorage.removeItem('disableInputs');
       localStorage.removeItem(`preQuestionnaire-${user.id}`);
 
-      localStorage.removeItem('aSITimeLeft');
-      localStorage.removeItem('disableinputs');
+      localStorage.removeItem('asiTimeLeft');
+      localStorage.removeItem('disableInputs');
       localStorage.removeItem(`ASI-${user.id}`);
 
       success = true;
