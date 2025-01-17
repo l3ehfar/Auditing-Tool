@@ -2,21 +2,38 @@
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import { notification } from '@marcellejs/core';
-  import { writable } from 'svelte/store';
 
-  let aSITimeLeft = 30;
+  let asiTimeLeft = 30;
   let totalQuestions = 4;
   let answeredQuestions = 0;
   let progress = 0;
   let canSubmit = false;
-  let disableinputs = false;
+  let disableInputs = false;
 
   let timerInterval: NodeJS.Timer;
-  let timeDisplay = writable(formatTime(aSITimeLeft));
+
+  async function loadUserData(userId: string) {
+    try {
+      const savedResponses = JSON.parse(localStorage.getItem(`ASI-${userId}`) || '{}');
+      console.log('Loaded ASI responses:', savedResponses);
+
+      Object.entries(savedResponses).forEach(([name, value]) => {
+        const radio = document.querySelector(
+          `input[name="${name}"][value="${value}"]`,
+        ) as HTMLInputElement;
+        if (radio) radio.checked = true;
+      });
+
+      checkProgress();
+    } catch (err) {
+      console.error('Error loading ASI data:', err);
+    }
+  }
 
   onMount(() => {
     const userId = localStorage.getItem('userId');
     const lastUserId = localStorage.getItem('lastUserId');
+    const alreadySubmitted = localStorage.getItem(`ASISubmitted-${userId}`) === 'true';
 
     if (!userId) {
       console.warn('No user ID found. Redirecting to signup...');
@@ -24,92 +41,64 @@
       return;
     }
 
+    console.log('Logged-in user ID:', userId);
+
+    if (alreadySubmitted) {
+      console.log('ASI questionnaire already submitted. Redirecting...');
+      goto('/conditionOne');
+      return;
+    }
+
     if (userId !== lastUserId) {
-      console.log('New user detected. Resetting ASI questionnaire.');
-      aSITimeLeft = 30;
-      disableinputs = false;
-      localStorage.removeItem('aSITimeLeft');
-      localStorage.removeItem('disableinputs');
+      console.log('New user detected. Resetting timer and states.');
+      asiTimeLeft = 30;
+      disableInputs = false;
+
+      localStorage.removeItem('asiTimeLeft');
+      localStorage.removeItem('disableInputs');
+
       localStorage.setItem('lastUserId', userId);
     } else {
-      const savedTime = parseInt(localStorage.getItem('aSITimeLeft') || '30', 10);
-      const savedDisableState = localStorage.getItem('disableinputs') === 'true';
-      aSITimeLeft = savedTime;
-      disableinputs = savedDisableState;
+      console.log('Returning user detected. Loading saved data.');
+      const savedTime = parseInt(localStorage.getItem('asiTimeLeft') || '30');
+      const savedDisableState = localStorage.getItem('disableInputs') === 'true';
+
+      asiTimeLeft = savedTime;
+      disableInputs = savedDisableState;
     }
 
-    timeDisplay.set(formatTime(aSITimeLeft));
+    loadUserData(userId);
 
-    if (!disableinputs) {
-      startTimer();
-    } else {
-      console.log('Inputs are disabled due to previous completion.');
-      updateInputState(disableinputs);
+    if (disableInputs) {
+      console.log('Disabling inputs as the questionnaire is already completed.');
     }
 
-    loadUserResponses(userId); // Load saved responses
+    if (!disableInputs) {
+      timerInterval = setInterval(() => {
+        if (asiTimeLeft > 0) {
+          asiTimeLeft -= 1;
+          localStorage.setItem('asiTimeLeft', asiTimeLeft.toString());
+        } else {
+          clearInterval(timerInterval);
+
+          const unansweredQuestions = highlightUnansweredQuestions();
+
+          if (unansweredQuestions.length > 0) {
+            notification({
+              title: 'Error',
+              message: 'Please answer all questions before time runs out.',
+              duration: 5000,
+              type: 'danger',
+            });
+          } else {
+            disableInputs = true;
+            localStorage.setItem('disableInputs', 'true');
+            // captureASIResponses();
+          }
+        }
+      }, 1000);
+    }
   });
-
-  function loadUserResponses(userId: string) {
-    const savedResponses = JSON.parse(localStorage.getItem(`ASI-${userId}`) || '{}');
-    console.log('Loaded ASI responses:', savedResponses);
-
-    Object.entries(savedResponses).forEach(([name, value]) => {
-      const radio = document.querySelector(
-        `input[name="${name}"][value="${value}"]`,
-      ) as HTMLInputElement;
-      if (radio) radio.checked = true;
-    });
-
-    checkProgress(); // Update progress after loading saved responses
-  }
-
-  function updateInputState(isDisabled: boolean) {
-    const radios = document.querySelectorAll('form input[type="radio"]');
-    radios.forEach((radio: HTMLInputElement) => {
-      radio.disabled = isDisabled;
-    });
-  }
-
-  function formatTime(seconds: number): string {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  }
-
-  function startTimer() {
-    clearInterval(timerInterval); // Ensure no duplicate timers
-    timerInterval = setInterval(() => {
-      if (aSITimeLeft > 0) {
-        aSITimeLeft -= 1;
-        localStorage.setItem('aSITimeLeft', aSITimeLeft.toString()); // Save the remaining time
-        timeDisplay.set(formatTime(aSITimeLeft));
-      } else {
-        clearInterval(timerInterval);
-        handleTimeout();
-      }
-    }, 1000);
-  }
-
-  function handleTimeout() {
-    const unansweredQuestions = highlightUnansweredQuestions();
-
-    if (unansweredQuestions.length > 0) {
-      notification({
-        title: 'Error',
-        message: 'Please answer all questions before time runs out.',
-        duration: 5000,
-        type: 'danger',
-      });
-    } else {
-      disableinputs = true;
-      localStorage.setItem('disableinputs', 'true');
-      updateInputState(disableinputs);
-      setTimeout(() => {
-        // captureASI();
-      }, 2000);
-    }
-  }
 
   function highlightUnansweredQuestions() {
     const formControls = document.querySelectorAll('.form-control');
@@ -123,64 +112,20 @@
         unanswered.push(control);
         control.style.border = '2px solid red';
         control.style.borderRadius = '5px';
-        control.style.padding = '10px';
+
+        radios.forEach((radio: HTMLInputElement) => {
+          radio.addEventListener('change', () => {
+            control.style.border = '';
+            control.style.borderRadius = '';
+          });
+        });
       } else {
         control.style.border = '';
-        control.style.padding = '';
+        control.style.borderRadius = '';
       }
-
-      radios.forEach((radio: HTMLInputElement) => {
-        radio.addEventListener('change', () => {
-          if (radio.checked) {
-            control.style.border = '';
-            control.style.padding = '';
-          }
-        });
-      });
     });
 
     return unanswered;
-  }
-
-  function captureASI() {
-    const userId = localStorage.getItem('userId');
-    if (!userId) {
-      console.error('User ID is missing. Cannot save responses.');
-      return;
-    }
-
-    const responses = {};
-    const radios = document.querySelectorAll('form input[type="radio"]:checked');
-    radios.forEach((radio: HTMLInputElement) => {
-      responses[radio.name] = radio.value;
-    });
-
-    localStorage.setItem(`ASI-${userId}`, JSON.stringify(responses));
-    console.log('Saved ASI responses:', responses);
-
-    clearInterval(timerInterval);
-    goto('/conditionOne');
-  }
-
-  function resetTimer() {
-    clearInterval(timerInterval);
-    aSITimeLeft = 30; // Reset to 30 seconds for testing
-    disableinputs = false;
-    localStorage.setItem('aSITimeLeft', aSITimeLeft.toString());
-    localStorage.setItem('disableinputs', 'false');
-
-    timeDisplay.set(formatTime(aSITimeLeft));
-    startTimer();
-
-    const formControls = document.querySelectorAll('.form-control');
-    formControls.forEach((control) => {
-      control.style.border = '';
-      control.style.padding = '';
-    });
-
-    progress = 0;
-    answeredQuestions = 0;
-    canSubmit = false;
   }
 
   function checkProgress() {
@@ -201,6 +146,63 @@
     progress = (answeredQuestions / totalQuestions) * 100;
     canSubmit = answeredQuestions === totalQuestions;
   }
+
+  function captureASIResponses() {
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      console.error('Cannot save data: User ID is missing.');
+      return;
+    }
+
+    const responses: { [key: string]: string } = {};
+    const radios = document.querySelectorAll('form input[type="radio"]:checked');
+    radios.forEach((radio: HTMLInputElement) => {
+      responses[radio.name] = radio.value;
+    });
+
+    localStorage.setItem(`ASI-${userId}`, JSON.stringify(responses));
+    localStorage.setItem(`ASISubmitted-${userId}`, 'true'); 
+    console.log('Saved ASI responses:', responses);
+
+    goto('/conditionOne');
+  }
+
+  function resetTimer() {
+    clearInterval(timerInterval);
+    asiTimeLeft = 30;
+    disableInputs = false;
+    localStorage.removeItem('asiTimeLeft');
+    localStorage.removeItem('disableInputs');
+
+    const formControls = document.querySelectorAll('.form-control');
+    formControls.forEach((control) => {
+      control.style.border = '';
+    });
+
+    timerInterval = setInterval(() => {
+      if (asiTimeLeft > 0) {
+        asiTimeLeft -= 1;
+        localStorage.setItem('asiTimeLeft', asiTimeLeft.toString());
+      } else {
+        clearInterval(timerInterval);
+
+        const unansweredQuestions = highlightUnansweredQuestions();
+
+        if (unansweredQuestions.length > 0) {
+          notification({
+            title: 'Error',
+            message: 'Please answer all questions before time runs out.',
+            duration: 5000,
+            type: 'danger',
+          });
+        } else {
+          disableInputs = true;
+          localStorage.setItem('disableInputs', 'true');
+          captureASIResponses();
+        }
+      }
+    }, 1000);
+  }
 </script>
 
 <div class="bg-base-100 min-h-screen p-4 flex items-center justify-center">
@@ -211,10 +213,10 @@
         <div class="w-full bg-gray-200 h-4 mb-4 rounded-full overflow-hidden">
           <div class="bg-blue-500 h-4 rounded-full transition-all" style="width: {progress}%"></div>
         </div>
-        <div class="flex justify-between items-center mb-6">
-          <p>Time left: {$timeDisplay}</p>
-          <!-- <button on:click={resetTimer} class="btn btn-secondary ml-4">Reset Timer</button> -->
-        </div>
+        <!-- <div class="flex justify-between items-center mb-6">
+          <p>Time left: {asiTimeLeft}</p>
+          <button on:click={resetTimer} class="btn btn-secondary ml-4">Reset Timer</button>
+        </div> -->
       </div>
       <h2 class="text-sm font-semibold mb-6">
         The statements on this page concern women, men, and their relationships in contemporary
@@ -230,12 +232,12 @@
             >
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q1" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q1" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q1" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q1" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q1" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q1" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input type="radio" name="q1" {value} disabled={disableInputs} />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
@@ -246,12 +248,12 @@
             >
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q2" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q2" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q2" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q2" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q2" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q2" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input type="radio" name="q2" {value} disabled={disableInputs} />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
@@ -261,12 +263,12 @@
             >
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q3" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q3" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q3" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q3" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q3" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q3" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input type="radio" name="q3" {value} disabled={disableInputs} />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
@@ -276,12 +278,12 @@
             >
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q4" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q4" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q4" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q4" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q4" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q4" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input type="radio" name="q4" {value} disabled={disableInputs} />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
@@ -558,10 +560,13 @@
             <span>Agree strongly</span>
           </div>
         </div> -->
+        </div>
       </form>
     </div>
     <div class="text-center mt-8">
-      <button on:click={captureASI} class="btn btn-primary" disabled={!canSubmit}>Submit</button>
+      <button on:click={captureASIResponses} class="btn btn-primary" disabled={!canSubmit}
+        >Submit</button
+      >
     </div>
   </div>
 </div>
