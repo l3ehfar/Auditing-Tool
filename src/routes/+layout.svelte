@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores'; 
   import Dataset from '$lib/dataset/Dataset.svelte';
-  import AffinityDiagram from '$lib/affinityDiagram/AffinityDiagram.svelte';
+  import Schemas from '$lib/schemas/Schemas.svelte';
   import './styles.css';
   import "tailwindcss/tailwind.css";
 
@@ -10,19 +10,20 @@
 </script>
 
 <div class="layout-container">
-  {#if currentRoute !== '/post-questionnaire'  && currentRoute !== '/pre-questionnaire' && currentRoute !== '/ASI-questionnaire' && currentRoute !== '/auth/signup' && currentRoute !== '/auth/login'}
-   
-    <div class="top-section">
-      <div class="fixed">
-        <Dataset />
+  {#if currentRoute !== '/post-questionnaire' && currentRoute !== '/pre-questionnaire' && currentRoute !== '/ASI-questionnaire' && currentRoute !== '/auth/signup' && currentRoute !== '/auth/login'}
+    <div class="main-section">
+      <div class="left-panel">
+        <div class="slot-section">
+          <Dataset />
+        </div>
+        <div class="dataset-section">
+          <slot />
+        </div>
       </div>
-      <div class="routed">
-        <slot />
+
+      <div class="right-panel">
+        <Schemas />
       </div>
-    </div>
-  
-    <div class="bottom-section">
-      <AffinityDiagram />
     </div>
   {:else}
 
@@ -32,46 +33,62 @@
   {/if}
 </div>
 
-
 <style>
   .layout-container {
     display: flex;
     flex-direction: column;
     height: 100vh;
-  }
-
-  .top-section {
-    flex: 1; 
-    display: flex;
     background-color: oklch(var(--b2));
   }
 
-  .fixed {
+  .main-section {
+    display: flex;
     flex: 1;
-    position: relative;
-    overflow-y: auto;
+    height: 100%;
+    width: 100%;
   }
 
-  .routed {
+  .left-panel {
+    flex: 1; 
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 2px;
+    gap: 2px; 
+  }
+
+  .slot-section {
+    flex: 1; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2px;
+    overflow: hidden; 
+  }
+
+  .dataset-section {
+    flex: 1; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2px;
+    overflow: hidden; 
+  }
+
+  .right-panel {
+    flex: 1; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    padding: 2px;
+  }
+
+  .routed-full {
     flex: 1;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 50vh;
-    max-width: 50vw;
-    overflow: hidden;
-    padding-top: 8px;
-    padding-bottom: 8px;
-  }
-
-  .bottom-section {
-    flex: 1; 
-    background-color: oklch(var(--b2));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding-right: 5px;
-    padding-left: 5px;
-    padding-bottom: 5px;
+    height: 100%;
   }
 </style>
