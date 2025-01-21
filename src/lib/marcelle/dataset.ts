@@ -70,38 +70,31 @@ async function cropAndResizeImage(image: ImageData): Promise<ImageData> {
     throw new Error('Failed to create canvas context');
   }
 
-  // Convert ImageData to an HTMLImageElement
   const imageBitmap = await createImageBitmap(image);
 
-  // Get original dimensions
   const originalWidth = imageBitmap.width;
   const originalHeight = imageBitmap.height;
 
-  // Determine the size of the largest square
   const squareSize = Math.min(originalWidth, originalHeight);
 
-  // Calculate cropping start points to center the square
   const cropX = (originalWidth - squareSize) / 2;
   const cropY = (originalHeight - squareSize) / 2;
 
-  // Set canvas dimensions to 200x200
   canvas.width = 200;
   canvas.height = 200;
 
-  // Draw the cropped and resized image onto the canvas
   ctx.drawImage(
     imageBitmap,
     cropX,
     cropY,
     squareSize,
-    squareSize, // Crop area
+    squareSize, 
     0,
     0,
     200,
-    200 // Resize to 200x200
+    200 
   );
 
-  // Return ImageData directly
   return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
@@ -112,7 +105,6 @@ export async function generateCaption(image: ImageData): Promise<string> {
     if (res && res.length > 0 && res[0].generated_text) {
       let generatedCaption = res[0].generated_text;
 
-      // Clean the generated caption
       generatedCaption = cleanCaption(generatedCaption);
 
       caption.$value.set(generatedCaption);
@@ -136,10 +128,8 @@ export async function handleCapture() {
 
   if (imageData && labelValue) {
     try {
-      // Crop and resize the uploaded image
       const processedImage = await cropAndResizeImage(imageData);
 
-      // Generate a caption for the processed image
       let instanceCaption = caption.$value.get();
 
       if (!instanceCaption || instanceCaption === 'No caption generated') {
@@ -155,11 +145,10 @@ export async function handleCapture() {
         return;
       }
 
-      // Clean the instance caption before storing
       instanceCaption = cleanCaption(instanceCaption);
 
       const instance: ImageInstance = {
-        x: processedImage, // Use the processed (cropped and resized) image
+        x: processedImage, 
         y: labelValue,
         thumbnail: thumbnailData,
         caption: instanceCaption,
@@ -197,10 +186,8 @@ export async function handleCapture() {
 input.$images.subscribe(async (image) => {
   if (image) {
     try {
-      // Crop and resize the uploaded image
       const processedImage = await cropAndResizeImage(image);
 
-      // Generate caption for the processed image
       const generatedCaption = await generateCaption(processedImage);
       caption.$value.set(generatedCaption);
     } catch (error) {
@@ -283,13 +270,10 @@ $selectedImage.subscribe((instance) => {
 input.$images.subscribe(async (image) => {
   if (image) {
     try {
-      // Crop and resize the uploaded image
       const processedImage = await cropAndResizeImage(image);
 
-      // Update the image stream with the processed image
       $imageStream.set(processedImage);
 
-      // Generate caption for the processed image
       const generatedCaption = await generateCaption(processedImage);
       caption.$value.set(generatedCaption);
 
