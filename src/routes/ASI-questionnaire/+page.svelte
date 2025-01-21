@@ -30,6 +30,20 @@
     }
   }
 
+  function saveResponse(question: string, value: string) {
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      console.error('Cannot save response: User ID is missing.');
+      return;
+    }
+
+    const savedResponses = JSON.parse(localStorage.getItem(`ASI-${userId}`) || '{}');
+    savedResponses[question] = value;
+    localStorage.setItem(`ASI-${userId}`, JSON.stringify(savedResponses));
+    console.log(`Saved response for ${question}: ${value}`);
+    checkProgress();
+  }
+
   onMount(() => {
     const userId = localStorage.getItem('userId');
     const lastUserId = localStorage.getItem('lastUserId');
@@ -45,7 +59,7 @@
 
     if (alreadySubmitted) {
       console.log('ASI questionnaire already submitted. Redirecting...');
-      goto('/conditionOne');
+      goto('/conditionTwo');
       return;
     }
 
@@ -69,9 +83,9 @@
 
     loadUserData(userId);
 
-    if (disableInputs) {
-      console.log('Disabling inputs as the questionnaire is already completed.');
-    }
+    // if (disableInputs) {
+    //   console.log('Disabling inputs as the questionnaire is already completed.');
+    // }
 
     if (!disableInputs) {
       timerInterval = setInterval(() => {
@@ -164,7 +178,7 @@
     localStorage.setItem(`ASISubmitted-${userId}`, 'true'); 
     console.log('Saved ASI responses:', responses);
 
-    goto('/conditionOne');
+    goto('/conditionTwo');
   }
 
   function resetTimer() {
@@ -207,17 +221,13 @@
 
 <div class="bg-base-100 min-h-screen p-4 flex items-center justify-center">
   <div class="container mx-auto max-w-2xl">
-    <h1 class="text-xl font-medium text-center mb-8">Ambivalent Sexism Inventory (ASI)</h1>
     <div class="bg-white shadow-lg rounded-lg p-8">
       <div class="sticky-container">
         <div class="w-full bg-gray-200 h-4 mb-4 rounded-full overflow-hidden">
           <div class="bg-blue-500 h-4 rounded-full transition-all" style="width: {progress}%"></div>
         </div>
-        <!-- <div class="flex justify-between items-center mb-6">
-          <p>Time left: {asiTimeLeft}</p>
-          <button on:click={resetTimer} class="btn btn-secondary ml-4">Reset Timer</button>
-        </div> -->
       </div>
+      <h1 class="text-xl font-medium text-center mb-8">Ambivalent Sexism Inventory (ASI)</h1>
       <h2 class="text-sm font-semibold mb-6">
         The statements on this page concern women, men, and their relationships in contemporary
         society. Please indicate the degree to which you agree or disagree with each statement by
@@ -234,7 +244,7 @@
               <span>Disagree strongly</span>
               {#each [0, 1, 2, 3, 4, 5] as value}
                 <label>
-                  <input type="radio" name="q1" {value} disabled={disableInputs} />
+                  <input type="radio" name="q1" {value} disabled={disableInputs} on:change={() => saveResponse('q1', value.toString())} />
                   {value}
                 </label>
               {/each}
@@ -250,7 +260,7 @@
               <span>Disagree strongly</span>
               {#each [0, 1, 2, 3, 4, 5] as value}
                 <label>
-                  <input type="radio" name="q2" {value} disabled={disableInputs} />
+                  <input type="radio" name="q2" {value} disabled={disableInputs} on:change={() => saveResponse('q2', value.toString())} />
                   {value}
                 </label>
               {/each}
@@ -265,7 +275,7 @@
               <span>Disagree strongly</span>
               {#each [0, 1, 2, 3, 4, 5] as value}
                 <label>
-                  <input type="radio" name="q3" {value} disabled={disableInputs} />
+                  <input type="radio" name="q3" {value} disabled={disableInputs} on:change={() => saveResponse('q3', value.toString())} />
                   {value}
                 </label>
               {/each}
@@ -280,7 +290,7 @@
               <span>Disagree strongly</span>
               {#each [0, 1, 2, 3, 4, 5] as value}
                 <label>
-                  <input type="radio" name="q4" {value} disabled={disableInputs} />
+                  <input type="radio" name="q4" {value} disabled={disableInputs} on:change={() => saveResponse('q4', value.toString())} />
                   {value}
                 </label>
               {/each}
@@ -612,7 +622,7 @@
     background-color: white;
     z-index: 10;
     padding: 20px 10px 1px 10px;
-    margin-bottom: 10px;
+    margin-bottom: 200px;
     /* box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);  */
   }
 </style>

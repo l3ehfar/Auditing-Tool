@@ -14,13 +14,18 @@
     success = false;
 
     console.log('Signup initiated:', { name, email });
-
+ 
     try {
       const user = await store.service('users').create({ name, email, password });
       console.log('Signup successful:', user);
 
-      localStorage.setItem('userId', user.id);
-      localStorage.setItem('lastUserId', user.id);
+      const userId = user.id;
+
+      localStorage.setItem('userId', userId);
+      localStorage.setItem('lastUserId', userId);
+
+      localStorage.removeItem('schemasCards');
+      localStorage.removeItem('schemasTimer');
 
       localStorage.removeItem('affinityDiagramRectangles');
       localStorage.removeItem('affinityDiagramDroppedItems');

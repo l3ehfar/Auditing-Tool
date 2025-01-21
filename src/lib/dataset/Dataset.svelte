@@ -88,7 +88,7 @@
         <!-- <div class="selector" use:marcelle={selectClass}></div> -->
       <!-- </div> -->
       <div class="timer-display">
-        Timer: {$timeDisplay}
+        <!-- Timer: {$timeDisplay} -->
       </div>
 
       <div class="right-tools">
