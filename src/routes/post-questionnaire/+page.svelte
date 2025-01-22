@@ -1,74 +1,121 @@
 <script lang="ts">
-  import { exportedHypotheses } from '$lib/store';
-  import { get } from 'svelte/store';
+  import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import { notification } from '@marcellejs/core';
-  import { writable } from 'svelte/store';
 
-  let data = get(exportedHypotheses);
-  let postqtimeleft = 10; 
-  let totalQuestions = ( data.length * 4 ) + 16;
+  let PQTimeLeft = 30;
+  let totalQuestions = 13;
   let answeredQuestions = 0;
   let progress = 0;
   let canSubmit = false;
-  let disableinputs = false;
+  let disableInputs = false;
 
   let timerInterval: NodeJS.Timer;
-  let timeDisplay = writable(formatTime(postqtimeleft));
 
-  if (!Array.isArray(data)) {
-    data = [];
+  async function loadUserData(userId: string) {
+    try {
+      const savedResponses = JSON.parse(localStorage.getItem(`PQ-${userId}`) || '{}');
+      console.log('Loaded post-questionnaire responses:', savedResponses);
+
+      Object.entries(savedResponses).forEach(([name, value]) => {
+        const radio = document.querySelector(
+          `input[name="${name}"][value="${value}"]`,
+        ) as HTMLInputElement;
+        if (radio) radio.checked = true;
+        const textarea = document.querySelector(`textarea[name="${name}"]`) as HTMLTextAreaElement;
+        if (textarea) textarea.value = value as string;
+      });
+
+      checkProgress();
+    } catch (err) {
+      console.error('Error loading post-questionnaire data:', err);
+    }
+  }
+
+  function saveResponse(question: string, value: string) {
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      console.error('Cannot save response: User ID is missing.');
+      return;
+    }
+
+    const savedResponses = JSON.parse(localStorage.getItem(`PQ-${userId}`) || '{}');
+
+    savedResponses[question] = value;
+
+    localStorage.setItem(`PQ-${userId}`, JSON.stringify(savedResponses));
+    // console.log(`Saved response for ${question}: ${value}`);
   }
 
   onMount(() => {
-    const savedTime = parseInt(localStorage.getItem('postqtimeleft') || '10', 10);
-    const savedDisableState = localStorage.getItem('disableinputs') === 'true';
+    const userId = localStorage.getItem('userId');
+    const lastUserId = localStorage.getItem('lastUserId');
+    const alreadySubmitted = localStorage.getItem(`PQSubmitted-${userId}`) === 'true';
 
-    postqtimeleft = savedTime;
-    disableinputs = savedDisableState;
+    if (!userId) {
+      console.warn('No user ID found. Redirecting to signup...');
+      goto('/auth/signup');
+      return;
+    }
 
-    if (!disableinputs) {
-      startTimer();
+    console.log('Logged-in user ID:', userId);
+
+    // if (alreadySubmitted) {
+    //   console.log('ASI questionnaire already submitted. Redirecting...');
+    //   goto('/conditionTwo');
+    //   return;
+    // }
+
+    if (userId !== lastUserId) {
+      console.log('New user detected. Resetting timer and states.');
+      PQTimeLeft = 30;
+      disableInputs = false;
+
+      localStorage.removeItem('PQTimeLeft');
+      localStorage.removeItem('disableInputs');
+
+      localStorage.setItem('lastUserId', userId);
     } else {
-      postqtimeleft = 0;
-      timeDisplay.set(formatTime(postqtimeleft));
+      console.log('Returning user detected. Loading saved data.');
+      const savedTime = parseInt(localStorage.getItem('PQTimeLeft') || '30');
+      const savedDisableState = localStorage.getItem('disableInputs') === 'true';
+
+      PQTimeLeft = savedTime;
+      disableInputs = savedDisableState;
+    }
+
+    loadUserData(userId);
+
+    // if (disableInputs) {
+    //   console.log('Disabling inputs as the questionnaire is already completed.');
+    // }
+
+    if (!disableInputs) {
+      timerInterval = setInterval(() => {
+        if (PQTimeLeft > 0) {
+          PQTimeLeft -= 1;
+          localStorage.setItem('PQTimeLeft', PQTimeLeft.toString());
+        } else {
+          clearInterval(timerInterval);
+
+          const unansweredQuestions = highlightUnansweredQuestions();
+
+          if (unansweredQuestions.length > 0) {
+            notification({
+              title: 'Error',
+              message: 'Please answer all questions before time runs out.',
+              duration: 5000,
+              type: 'danger',
+            });
+          } else {
+            disableInputs = true;
+            localStorage.setItem('disableInputs', 'true');
+            // captureASIResponses();
+          }
+        }
+      }, 1000);
     }
   });
-
-  function formatTime(seconds: number): string {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  }
-
-  function startTimer() {
-    clearInterval(timerInterval);
-    timerInterval = setInterval(() => {
-      if (postqtimeleft > 0) {
-        postqtimeleft -= 1;
-        timeDisplay.set(formatTime(postqtimeleft));
-      } else {
-        clearInterval(timerInterval);
-        handleTimeout();
-      }
-    }, 1000);
-  }
-
-  function handleTimeout() {
-    const unansweredQuestions = highlightUnansweredQuestions();
-
-    if (unansweredQuestions.length > 0) {
-      notification({
-        title: 'Error',
-        message: 'Please answer all required questions before submission.',
-        duration: 5000,
-        type: 'danger',
-      });
-    } else {
-      disableinputs = true;
-      captureASI();
-    }
-  }
 
   function highlightUnansweredQuestions() {
     const formControls = document.querySelectorAll('.form-control');
@@ -76,61 +123,51 @@
 
     formControls.forEach((control) => {
       const radios = control.querySelectorAll('input[type="radio"]');
-      const isAnswered = Array.from(radios).some((radio: HTMLInputElement) => radio.checked);
+      const textarea = control.querySelector('textarea');
+      const name = radios[0]?.name || textarea?.name;
 
-      if (!isAnswered) {
-        if (!control.querySelector('textarea')) { // Skip open-ended questions
+      // Check if the question is the optional open-ended one and skip it
+      if (name !== 'additional-comments') {
+        const isAnswered =
+          Array.from(radios).some((radio: HTMLInputElement) => radio.checked) ||
+          (textarea && textarea.value.trim() !== ''); // Include open-ended question in validation
+
+        if (!isAnswered) {
           unanswered.push(control);
           control.style.border = '2px solid red';
           control.style.borderRadius = '5px';
-          control.style.padding = '10px';
-        }
-      } else {
-        control.style.border = '';
-        control.style.padding = '';
-      }
 
-      radios.forEach((radio: HTMLInputElement) => {
-        radio.addEventListener('change', () => {
-          if (radio.checked) {
-            control.style.border = '';
-            control.style.padding = '';
+          // Add event listener to remove highlighting once answered
+          if (radios.length > 0) {
+            radios.forEach((radio: HTMLInputElement) => {
+              radio.addEventListener('change', () => {
+                control.style.border = '';
+                control.style.borderRadius = '';
+              });
+            });
           }
-        });
-      });
+
+          if (textarea) {
+            textarea.addEventListener('input', () => {
+              control.style.border = '';
+              control.style.borderRadius = '';
+            });
+          }
+        } else {
+          control.style.border = '';
+          control.style.borderRadius = '';
+        }
+      }
     });
 
     return unanswered;
   }
 
-  function captureASI() {
-    clearInterval(timerInterval);
-    // goto('/post-questionnaire-summary');
-  }
-
-  function resetTimer() {
-    clearInterval(timerInterval);
-    postqtimeleft = 10;
-    disableinputs = false;
-    localStorage.removeItem('postqtimeleft');
-    localStorage.removeItem('disableinputs');
-
-    timeDisplay.set(formatTime(postqtimeleft));
-    startTimer();
-
-    const formControls = document.querySelectorAll('.form-control');
-    formControls.forEach((control) => {
-      control.style.border = '';
-      control.style.padding = '';
-    });
-
-    progress = 0;
-    answeredQuestions = 0;
-    canSubmit = false;
-  }
-
   function checkProgress() {
     const radios = document.querySelectorAll('form input[type="radio"]');
+    const textareas = document.querySelectorAll('form textarea');
+
+    // Group radios by question name
     const groupedByQuestion = Array.from(radios).reduce(
       (acc, radio: HTMLInputElement) => {
         acc[radio.name] = acc[radio.name] || [];
@@ -140,398 +177,733 @@
       {} as Record<string, HTMLInputElement[]>,
     );
 
-    answeredQuestions = Object.values(groupedByQuestion).filter((options) =>
+    // Count answered radio questions
+    let answeredRadios = Object.values(groupedByQuestion).filter((options) =>
       options.some((opt) => opt.checked),
     ).length;
 
-    progress = (answeredQuestions / totalQuestions) * 100;
-    canSubmit = answeredQuestions === totalQuestions;
+    // Count answered textareas
+    let answeredTextareas = Array.from(textareas).filter((textarea: HTMLTextAreaElement) => {
+      return textarea.name !== 'additional-comments' && textarea.value.trim() !== ''; // Exclude optional
+    }).length;
+
+    // Total answered mandatory questions
+    answeredQuestions = answeredRadios + answeredTextareas;
+
+    // Calculate progress excluding the optional question
+    progress = (answeredQuestions / (totalQuestions - 1)) * 100; // Subtract 1 for the optional question
+    canSubmit = answeredQuestions === totalQuestions - 1; // All mandatory questions answered
+  }
+
+  function capturePQResponses() {
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      console.error('Cannot save data: User ID is missing.');
+      return;
+    }
+
+    const responses: { [key: string]: string } = {};
+    const radios = document.querySelectorAll('form input[type="radio"]:checked');
+    radios.forEach((radio: HTMLInputElement) => {
+      responses[radio.name] = radio.value;
+    });
+
+    const textareas = document.querySelectorAll('form textarea');
+    textareas.forEach((textarea: HTMLTextAreaElement) => {
+      responses[textarea.name] = textarea.value.trim(); // Ensure no trailing spaces
+    });
+
+    localStorage.setItem(`PQ-${userId}`, JSON.stringify(responses));
+    localStorage.setItem(`PQSubmitted-${userId}`, 'true');
+    console.log('Saved PQ responses:', responses);
+    notification({
+      title: 'Answers Submitted',
+      message: 'Your answers have been successfully submitted.',
+      duration: 3000,
+    });
+  }
+
+  function resetTimer() {
+    clearInterval(timerInterval);
+    PQTimeLeft = 30;
+    disableInputs = false;
+    localStorage.removeItem('PQTimeLeft');
+    localStorage.removeItem('disableInputs');
+
+    const formControls = document.querySelectorAll('.form-control');
+    formControls.forEach((control) => {
+      control.style.border = '';
+    });
+
+    timerInterval = setInterval(() => {
+      if (PQTimeLeft > 0) {
+        PQTimeLeft -= 1;
+        localStorage.setItem('PQTimeLeft', PQTimeLeft.toString());
+      } else {
+        clearInterval(timerInterval);
+
+        const unansweredQuestions = highlightUnansweredQuestions();
+
+        if (unansweredQuestions.length > 0) {
+          notification({
+            title: 'Error',
+            message: 'Please answer all questions before time runs out.',
+            duration: 5000,
+            type: 'danger',
+          });
+        } else {
+          disableInputs = true;
+          localStorage.setItem('disableInputs', 'true');
+          capturePQResponses();
+        }
+      }
+    }, 1000);
   }
 </script>
 
-<div class="bg-base-100 min-h-screen p-4">
-  <div class="container mx-auto">
-    <h1 class="text-xl font-medium text-center mb-8">Post-Questionnaire</h1>
-    <div class="sticky-container">
-      <div class="w-full bg-gray-200 h-4 mb-4 rounded-full overflow-hidden">
-        <div class="bg-blue-500 h-4 rounded-full transition-all" style="width: {progress}%"></div>
+<div class="bg-base-100 min-h-screen p-4 flex items-center justify-center">
+  <div class="container mx-auto max-w-2xl">
+    <div class="p-8">
+      <div class="sticky-container">
+        <div class="w-full bg-gray-200 h-4 mb-4 rounded-full overflow-hidden">
+          <div class="bg-blue-500 h-4 rounded-full transition-all" style="width: {progress}%"></div>
+        </div>
       </div>
-      <div class="flex justify-between items-center mb-6">
-        <p>Time left: {$timeDisplay}</p>
-        <button on:click={resetTimer} class="btn btn-secondary ml-4">Reset Timer</button>
-      </div>
-    </div>
-    {#if data.length > 0}
-      <!-- DaisyUI Carousel -->
-      <div class="carousel carousel-center space-x-4">
-        {#each data as { id, text }}
-          <div class="carousel-item">
-            <div class="bg-white shadow-lg rounded-lg p-6 w-96">
-              <h3 class="text-base font-semibold mb-4">Hypothesis {id}</h3>
-              <p class="mb-6">{text}</p>
-              <form class="questionnaire space-y-4">
-                <div class="form-control" on:change={checkProgress}>
-                  <label class="label font-medium text-sm"
-                    >How confident are you about this hypothesis?
-                  </label>
-                  <div class="likert-scale flex justify-between">
-                    <label
-                      ><input type="radio" name="confidence-{id}" value="1" /> Very Uncertain</label
-                    >
-                    <label><input type="radio" name="confidence-{id}" value="2" /> Uncertain</label>
-                    <label><input type="radio" name="confidence-{id}" value="3" /> Neutral</label>
-                    <label><input type="radio" name="confidence-{id}" value="4" /> Confident</label>
-                    <label
-                      ><input type="radio" name="confidence-{id}" value="5" /> Very Confident</label
-                    >
-                  </div>
-                </div>
-
-                <div class="form-control" on:change={checkProgress}>
-                  <label class="label font-medium text-sm">
-                    Did you find any examples that go against your hypothesis? (e.g. cases where
-                    your hypothesis doesn't hold true.)
-                  </label>
-                  <div class="radio-options flex space-x-4">
-                    <label>
-                      <input type="radio" name="counterexamples-{id}" value="yes" /> Yes
-                    </label>
-                    <label>
-                      <input type="radio" name="counterexamples-{id}" value="no" /> No
-                    </label>
-                  </div>
-                </div>
-
-                <div class="form-control" on:change={checkProgress}>
-                  <label class="label font-medium text-sm">
-                    How often does the bias described in your hypothesis occur?
-                  </label>
-                  <div class="likert-scale flex justify-between">
-                    <label><input type="radio" name="frequency-{id}" value="1" /> Never</label>
-                    <label><input type="radio" name="frequency-{id}" value="2" /> Rarely</label>
-                    <label><input type="radio" name="frequency-{id}" value="3" /> Sometimes</label>
-                    <label><input type="radio" name="frequency-{id}" value="4" /> Often</label>
-                    <label><input type="radio" name="frequency-{id}" value="5" /> Always</label>
-                  </div>
-                </div>
-
-                <div class="form-control" on:change={checkProgress}>
-                  <label class="label font-medium text-sm">
-                    How problematic is the bias described in your hypothesis?
-                  </label>
-                  <div class="likert-scale flex justify-between">
-                    <label
-                      ><input type="radio" name="problematic-{id}" value="1" /> Not problematic</label
-                    >
-                    <label
-                      ><input type="radio" name="problematic-{id}" value="2" /> Slightly problematic</label
-                    >
-                    <label
-                      ><input type="radio" name="problematic-{id}" value="3" /> Somewhat problematic</label
-                    >
-                    <label
-                      ><input type="radio" name="problematic-{id}" value="4" /> problematic</label
-                    >
-                    <label
-                      ><input type="radio" name="problematic-{id}" value="5" /> Very problematic</label
-                    >
-                  </div>
-                </div>
-
-                <div class="form-control">
-                  <label class="label font-medium text-sm">
-                    Do you have additional comments about this hypothesis?
-                  </label>
-                  <textarea
-                    name="comments-{id}"
-                    placeholder="Add your comments here..."
-                    class="textarea textarea-xs textarea-bordered"
-                  ></textarea>
-                </div>
-              </form>
+      <h1 class="text-xl font-medium text-center mb-8">Post-Questionnaire</h1>
+      <section class="bg-white shadow-lg rounded-lg p-8 mb-12 max-w-2xl mx-auto">
+        <h2 class="text-lg font-semibold mb-6">Views on the Image Captioning Model</h2>
+        <form class="space-y-6" on:change={checkProgress}>
+          <div class="form-control">
+            <label class="label font-medium text-sm">
+              1. How well do you think this image captioning model fulfills its purpose, that is,
+              accurately describing images?
+            </label>
+            <div class="likert-scale flex justify-between">
+              <label>
+                <input
+                  type="radio"
+                  name="accuracy"
+                  value="1"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('accuracy', event.target.value)}
+                /> Very poorly
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="accuracy"
+                  value="2"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('accuracy', event.target.value)}
+                /> Poorly
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="accuracy"
+                  value="3"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('accuracy', event.target.value)}
+                /> Neutral
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="accuracy"
+                  value="4"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('accuracy', event.target.value)}
+                /> Accurately
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="accuracy"
+                  value="5"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('accuracy', event.target.value)}
+                /> Very accurately
+              </label>
             </div>
           </div>
-        {/each}
-      </div>
-    {:else}
-      <p class="text-center text-xs font-medium">No hypotheses to display.</p>
-    {/if}
 
-    <section class="bg-white shadow-lg rounded-lg p-8 mb-12 max-w-2xl mx-auto">
-      <h2 class="text-lg font-semibold mb-6">Views on the Image Captioning Model</h2>
-      <form class="space-y-6" on:change={checkProgress}>
-        <div class="form-control">
-          <label class="label font-medium text-sm">
-            1. How well do you think this image captioning model fulfills its purpose, that is,
-            accurately describing images?
-          </label>
-          <div class="likert-scale flex justify-between">
-            <label>
-              <input type="radio" name="accuracy" value="1" /> Very poorly
+          <div class="form-control">
+            <label class="label font-medium text-sm">
+              2. How well do you think you understand the behavior of the image captioning model
+              after this audit?
             </label>
-            <label>
-              <input type="radio" name="accuracy" value="2" /> Poorly
-            </label>
-            <label>
-              <input type="radio" name="accuracy" value="3" /> Neutral
-            </label>
-            <label>
-              <input type="radio" name="accuracy" value="4" /> Accurately
-            </label>
-            <label>
-              <input type="radio" name="accuracy" value="5" /> Very accurately
-            </label>
+            <div class="likert-scale flex justify-between">
+              <label>
+                <input
+                  type="radio"
+                  name="understanding"
+                  value="1"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('understanding', event.target.value)}
+                /> Not at all
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="understanding"
+                  value="2"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('understanding', event.target.value)}
+                /> Slightly
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="understanding"
+                  value="3"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('understanding', event.target.value)}
+                /> Moderately
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="understanding"
+                  value="4"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('understanding', event.target.value)}
+                /> Well
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="understanding"
+                  value="5"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('understanding', event.target.value)}
+                /> Very well
+              </label>
+            </div>
           </div>
-        </div>
 
-        <div class="form-control">
-          <label class="label font-medium text-sm">
-           2.  How well do you think you understand the behavior of the image captioning model after
-            this audit?
-          </label>
-          <div class="likert-scale flex justify-between">
-            <label>
-              <input type="radio" name="understanding" value="1" /> Not at all
+          <div class="form-control">
+            <label class="label font-medium text-sm">
+              3. In your opinion, which populations might have been most affected negatively or
+              harmed by the biases you observed in the captions?
             </label>
-            <label>
-              <input type="radio" name="understanding" value="2" /> Slightly
-            </label>
-            <label>
-              <input type="radio" name="understanding" value="3" /> Moderately
-            </label>
-            <label>
-              <input type="radio" name="understanding" value="4" /> Well
-            </label>
-            <label>
-              <input type="radio" name="understanding" value="5" /> Very well
-            </label>
+            <p style="font-size: 0.7rem; margin-bottom:2px; margin-left: 10px;">
+              age-based groups, gender-based groups, racial or ethnic groups, socioeconomic groups,
+              other marginalized groups (e.g., LGBTQ+, people with disabilities, immigrants)
+            </p>
+            <textarea
+              name="population-targeted"
+              placeholder="Add your comments here..."
+              class="textarea textarea-bordered textarea-xs"
+              disabled={disableInputs}
+              on:input={(event) => saveResponse('populations-affected', event.target.value)}
+            ></textarea>
           </div>
-        </div>
+        </form>
+      </section>
+      <section
+        class="bg-white shadow-lg rounded-lg p-8 mb-12 max-w-2xl mx-auto"
+        style="margin-top: 20px;"
+      >
+        <h2 class="text-lg font-semibold mb-6">Views on the Auditing Interface</h2>
+        <form class="space-y-6" on:change={checkProgress}>
+          <div class="form-control">
+            <label class="label font-medium text-sm">
+              1. I found the interface intuitive and easy to use.
+            </label>
+            <div class="likert-scale flex justify-between">
+              <label
+                ><input
+                  type="radio"
+                  name="intuitive"
+                  value="1"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('intuitive', event.target.value)}
+                /> Strongly Disagree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="intuitive"
+                  value="2"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('intuitive', event.target.value)}
+                /> Disagree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="intuitive"
+                  value="3"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('intuitive', event.target.value)}
+                /> Neutral</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="intuitive"
+                  value="4"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('intuitive', event.target.value)}
+                /> Agree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="intuitive"
+                  value="5"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('intuitive', event.target.value)}
+                /> Strongly Agree</label
+              >
+            </div>
+          </div>
 
-        <div class="form-control">
-          <label class="label font-medium text-sm">
-           3.  To what extent do you think algorithmic biases could cause harm in real-world
-            applications?
-          </label>
-          <div class="likert-scale flex justify-between">
-            <label>
-              <input type="radio" name="bias-impact" value="1" /> Not at all
+          <div class="form-control">
+            <label class="label font-medium text-sm">
+              2. The interface required too much effort to learn or use effectively.
             </label>
-            <label>
-              <input type="radio" name="bias-impact" value="2" /> Slightly
-            </label>
-            <label>
-              <input type="radio" name="bias-impact" value="3" /> Moderately
-            </label>
-            <label>
-              <input type="radio" name="bias-impact" value="4" /> Significantly
-            </label>
-            <label>
-              <input type="radio" name="bias-impact" value="5" /> Very significantly
-            </label>
+            <div class="likert-scale flex justify-between">
+              <label
+                ><input
+                  type="radio"
+                  name="effort"
+                  value="1"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('effort', event.target.value)}
+                /> Strongly Disagree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="effort"
+                  value="2"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('effort', event.target.value)}
+                /> Disagree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="effort"
+                  value="3"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('effort', event.target.value)}
+                /> Neutral</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="effort"
+                  value="4"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('effort', event.target.value)}
+                /> Agree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="effort"
+                  value="5"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('effort', event.target.value)}
+                /> Strongly Agree</label
+              >
+            </div>
           </div>
-        </div>
 
-        <div class="form-control">
-          <label class="label font-medium text-sm">
-            4. To what extent did you perceive bias against women in the captioning model's descriptions?
-          </label>
-          <div class="likert-scale flex justify-between">
-            <label>
-              <input type="radio" name="bias-perception" value="1" /> No bias observed
+          <div class="form-control">
+            <label class="label font-medium text-sm">
+              3. I discovered potential issues with the system I hadn’t anticipated.
             </label>
-            <label>
-              <input type="radio" name="bias-perception" value="2" /> Minimal bias
-            </label>
-            <label>
-              <input type="radio" name="bias-perception" value="3" /> Moderate bias
-            </label>
-            <label>
-              <input type="radio" name="bias-perception" value="4" /> Significant bias
-            </label>
-            <label>
-              <input type="radio" name="bias-perception" value="5" /> Strong bias observed
-            </label>
+            <div class="likert-scale flex justify-between">
+              <label
+                ><input
+                  type="radio"
+                  name="uncover-bias"
+                  value="1"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('uncover-bias', event.target.value)}
+                /> Strongly Disagree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="uncover-bias"
+                  value="2"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('uncover-bias', event.target.value)}
+                /> Disagree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="uncover-bias"
+                  value="3"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('uncover-bias', event.target.value)}
+                /> Neutral</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="uncover-bias"
+                  value="4"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('uncover-bias', event.target.value)}
+                /> Agree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="uncover-bias"
+                  value="5"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('uncover-bias', event.target.value)}
+                /> Strongly Agree</label
+              >
+            </div>
           </div>
-        </div>        
-      </form>
-    </section>
 
-    <section class="bg-white shadow-lg rounded-lg p-8 mb-12 max-w-2xl mx-auto">
-      <h2 class="text-lg font-semibold mb-6">Views on the Auditing Interface</h2>
-      <form class="space-y-6" on:change={checkProgress}>
-        <div class="form-control">
-          <label class="label font-medium text-sm">
-           1. I found the interface intuitive and easy to use.
-          </label>
-          <div class="likert-scale flex justify-between">
-            <label><input type="radio" name="intuitive" value="1" /> Strongly Disagree</label>
-            <label><input type="radio" name="intuitive" value="2" /> Disagree</label>
-            <label><input type="radio" name="intuitive" value="3" /> Neutral</label>
-            <label><input type="radio" name="intuitive" value="4" /> Agree</label>
-            <label><input type="radio" name="intuitive" value="5" /> Strongly Agree</label>
+          <div class="form-control">
+            <label class="label font-medium text-sm">
+              4. I would have discovered these same issues without a tool like the one I used.
+            </label>
+            <div class="likert-scale flex justify-between">
+              <label
+                ><input
+                  type="radio"
+                  name="same-issues"
+                  value="1"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('same-issues', event.target.value)}
+                /> Strongly Disagree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="same-issues"
+                  value="2"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('same-issues', event.target.value)}
+                /> Disagree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="same-issues"
+                  value="3"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('same-issues', event.target.value)}
+                /> Neutral</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="same-issues"
+                  value="4"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('same-issues', event.target.value)}
+                /> Agree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="same-issues"
+                  value="5"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('same-issues', event.target.value)}
+                /> Strongly Agree</label
+              >
+            </div>
           </div>
-        </div>
-    
-        <div class="form-control">
-          <label class="label font-medium text-sm">
-            2. The interface required too much effort to learn or use effectively.
-          </label>
-          <div class="likert-scale flex justify-between">
-            <label><input type="radio" name="effort" value="1" /> Strongly Disagree</label>
-            <label><input type="radio" name="effort" value="2" /> Disagree</label>
-            <label><input type="radio" name="effort" value="3" /> Neutral</label>
-            <label><input type="radio" name="effort" value="4" /> Agree</label>
-            <label><input type="radio" name="effort" value="5" /> Strongly Agree</label>
-          </div>
-        </div>
-    
-        <div class="form-control">
-          <label class="label font-medium text-sm">
-           3. The interface provided sufficient tools to explore and test my hypotheses.
-          </label>
-          <div class="likert-scale flex justify-between">
-            <label><input type="radio" name="tools" value="1" /> Strongly Disagree</label>
-            <label><input type="radio" name="tools" value="2" /> Disagree</label>
-            <label><input type="radio" name="tools" value="3" /> Neutral</label>
-            <label><input type="radio" name="tools" value="4" /> Agree</label>
-            <label><input type="radio" name="tools" value="5" /> Strongly Agree</label>
-          </div>
-        </div>
-    
-        <div class="form-control">
-          <label class="label font-medium text-sm">
-            4. The interface helped me uncover biases I would not have identified otherwise.
-          </label>
-          <div class="likert-scale flex justify-between">
-            <label><input type="radio" name="uncover-bias" value="1" /> Strongly Disagree</label>
-            <label><input type="radio" name="uncover-bias" value="2" /> Disagree</label>
-            <label><input type="radio" name="uncover-bias" value="3" /> Neutral</label>
-            <label><input type="radio" name="uncover-bias" value="4" /> Agree</label>
-            <label><input type="radio" name="uncover-bias" value="5" /> Strongly Agree</label>
-          </div>
-        </div>
-    
-        <div class="form-control">
-          <label class="label font-medium text-sm">
-           5. The interface made it difficult to detect nuanced patterns of bias.
-          </label>
-          <div class="likert-scale flex justify-between">
-            <label><input type="radio" name="difficult-patterns" value="1" /> Strongly Disagree</label>
-            <label><input type="radio" name="difficult-patterns" value="2" /> Disagree</label>
-            <label><input type="radio" name="difficult-patterns" value="3" /> Neutral</label>
-            <label><input type="radio" name="difficult-patterns" value="4" /> Agree</label>
-            <label><input type="radio" name="difficult-patterns" value="5" /> Strongly Agree</label>
-          </div>
-        </div>
-    
-        <div class="form-control">
-          <label class="label font-medium text-sm">
-           6. The interface did not reveal any biases I wasn’t already expecting.
-          </label>
-          <div class="likert-scale flex justify-between">
-            <label><input type="radio" name="no-new-biases" value="1" /> Strongly Disagree</label>
-            <label><input type="radio" name="no-new-biases" value="2" /> Disagree</label>
-            <label><input type="radio" name="no-new-biases" value="3" /> Neutral</label>
-            <label><input type="radio" name="no-new-biases" value="4" /> Agree</label>
-            <label><input type="radio" name="no-new-biases" value="5" /> Strongly Agree</label>
-          </div>
-        </div>
-    
-        <div class="form-control">
-          <label class="label font-medium text-sm">
-           7. The interface helped me understand the systemic patterns of bias in the model's behavior.
-          </label>
-          <div class="likert-scale flex justify-between">
-            <label><input type="radio" name="systemic-bias" value="1" /> Strongly Disagree</label>
-            <label><input type="radio" name="systemic-bias" value="2" /> Disagree</label>
-            <label><input type="radio" name="systemic-bias" value="3" /> Neutral</label>
-            <label><input type="radio" name="systemic-bias" value="4" /> Agree</label>
-            <label><input type="radio" name="systemic-bias" value="5" /> Strongly Agree</label>
-          </div>
-        </div>
-    
-        <div class="form-control">
-          <label class="label font-medium text-sm">
-           8. I struggled to connect individual instances to systemic patterns of bias using the interface.
-          </label>
-          <div class="likert-scale flex justify-between">
-            <label><input type="radio" name="struggle-patterns" value="1" /> Strongly Disagree</label>
-            <label><input type="radio" name="struggle-patterns" value="2" /> Disagree</label>
-            <label><input type="radio" name="struggle-patterns" value="3" /> Neutral</label>
-            <label><input type="radio" name="struggle-patterns" value="4" /> Agree</label>
-            <label><input type="radio" name="struggle-patterns" value="5" /> Strongly Agree</label>
-          </div>
-        </div>
-    
-        <div class="form-control">
-          <label class="label font-medium text-sm">
-           9. The interface improved my ability to validate or disprove my hypotheses.
-          </label>
-          <div class="likert-scale flex justify-between">
-            <label><input type="radio" name="validate-hypotheses" value="1" /> Strongly Disagree</label>
-            <label><input type="radio" name="validate-hypotheses" value="2" /> Disagree</label>
-            <label><input type="radio" name="validate-hypotheses" value="3" /> Neutral</label>
-            <label><input type="radio" name="validate-hypotheses" value="4" /> Agree</label>
-            <label><input type="radio" name="validate-hypotheses" value="5" /> Strongly Agree</label>
-          </div>
-        </div>
-    
-        <div class="form-control">
-          <label class="label font-medium text-sm">
-           10. The interface was insufficient for effectively testing hypotheses.
-          </label>
-          <div class="likert-scale flex justify-between">
-            <label><input type="radio" name="insufficient-testing" value="1" /> Strongly Disagree</label>
-            <label><input type="radio" name="insufficient-testing" value="2" /> Disagree</label>
-            <label><input type="radio" name="insufficient-testing" value="3" /> Neutral</label>
-            <label><input type="radio" name="insufficient-testing" value="4" /> Agree</label>
-            <label><input type="radio" name="insufficient-testing" value="5" /> Strongly Agree</label>
-          </div>
-        </div>
-    
-        <div class="form-control">
-          <label class="label font-medium text-sm">
-            11. The interface helped me efficiently collect evidence for my hypotheses.
-          </label>
-          <div class="likert-scale flex justify-between">
-            <label><input type="radio" name="collect-evidence" value="1" /> Strongly Disagree</label>
-            <label><input type="radio" name="collect-evidence" value="2" /> Disagree</label>
-            <label><input type="radio" name="collect-evidence" value="3" /> Neutral</label>
-            <label><input type="radio" name="collect-evidence" value="4" /> Agree</label>
-            <label><input type="radio" name="collect-evidence" value="5" /> Strongly Agree</label>
-          </div>
-        </div>
-    
-        <div class="form-control">
-          <label class="label font-medium text-sm">
-           12. Overall, I found this interface helpful in conducting the auditing tasks.
-          </label>
-          <div class="likert-scale flex justify-between">
-            <label><input type="radio" name="helpful-interface" value="1" /> Strongly Disagree</label>
-            <label><input type="radio" name="helpful-interface" value="2" /> Disagree</label>
-            <label><input type="radio" name="helpful-interface" value="3" /> Neutral</label>
-            <label><input type="radio" name="helpful-interface" value="4" /> Agree</label>
-            <label><input type="radio" name="helpful-interface" value="5" /> Strongly Agree</label>
-          </div>
-        </div>
-    
-        <div class="form-control">
-          <label class="label font-medium text-sm">
-           13. Is there anything else you would like to share about your experience?
-          </label>
-          <textarea
-            name="additional-comments"
-            placeholder="Add your comments here..."
-            class="textarea textarea-bordered textarea-xs"
-          ></textarea>
-        </div>
-      </form>
-    </section>
-    
 
+          <div class="form-control">
+            <label class="label font-medium text-sm">
+              5. The tool was useful in aiding understanding of the overall behavior of the image
+              captioning model.
+            </label>
+            <div class="likert-scale flex justify-between">
+              <label
+                ><input
+                  type="radio"
+                  name="understanding-system"
+                  value="1"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('understanding-system', event.target.value)}
+                /> Strongly Disagree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="understanding-system"
+                  value="2"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('understanding-system', event.target.value)}
+                /> Disagree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="understanding-system"
+                  value="3"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('understanding-system', event.target.value)}
+                /> Neutral</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="understanding-system"
+                  value="4"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('understanding-system', event.target.value)}
+                /> Agree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="understanding-system"
+                  value="5"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('understanding-system', event.target.value)}
+                /> Strongly Agree</label
+              >
+            </div>
+          </div>
+
+          <div class="form-control">
+            <label class="label font-medium text-sm">
+              6. The interface improved my ability to validate or disprove my hypotheses. (or The
+              interface provided sufficient tools to explore and test my hypotheses.?)
+            </label>
+            <div class="likert-scale flex justify-between">
+              <label
+                ><input
+                  type="radio"
+                  name="validate-hypotheses"
+                  value="1"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('validate-hypotheses', event.target.value)}
+                /> Strongly Disagree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="validate-hypotheses"
+                  value="2"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('validate-hypotheses', event.target.value)}
+                /> Disagree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="validate-hypotheses"
+                  value="3"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('validate-hypotheses', event.target.value)}
+                /> Neutral</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="validate-hypotheses"
+                  value="4"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('validate-hypotheses', event.target.value)}
+                /> Agree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="validate-hypotheses"
+                  value="5"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('validate-hypotheses', event.target.value)}
+                /> Strongly Agree</label
+              >
+            </div>
+          </div>
+
+          <div class="form-control">
+            <label class="label font-medium text-sm">
+              7. The interface helped me efficiently collect evidence for my hypotheses.
+            </label>
+            <div class="likert-scale flex justify-between">
+              <label
+                ><input
+                  type="radio"
+                  name="collect-evidence"
+                  value="1"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('collect-evidence', event.target.value)}
+                /> Strongly Disagree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="collect-evidence"
+                  value="2"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('collect-evidence', event.target.value)}
+                /> Disagree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="collect-evidence"
+                  value="3"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('collect-evidence', event.target.value)}
+                /> Neutral</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="collect-evidence"
+                  value="4"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('collect-evidence', event.target.value)}
+                /> Agree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="collect-evidence"
+                  value="5"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('collect-evidence', event.target.value)}
+                /> Strongly Agree</label
+              >
+            </div>
+          </div>
+
+          <div class="form-control">
+            <label class="label font-medium text-sm">
+              8. Overall, I found this interface helpful in conducting the auditing task.
+            </label>
+            <div class="likert-scale flex justify-between">
+              <label
+                ><input
+                  type="radio"
+                  name="helpful-interface"
+                  value="1"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('helpful-interface', event.target.value)}
+                /> Strongly Disagree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="helpful-interface"
+                  value="2"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('helpful-interface', event.target.value)}
+                /> Disagree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="helpful-interface"
+                  value="3"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('helpful-interface', event.target.value)}
+                /> Neutral</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="helpful-interface"
+                  value="4"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('helpful-interface', event.target.value)}
+                /> Agree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="helpful-interface"
+                  value="5"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('helpful-interface', event.target.value)}
+                /> Strongly Agree</label
+              >
+            </div>
+          </div>
+
+          <div class="form-control">
+            <label class="label font-medium text-sm">
+              9. In using this auditing tool, I had little control to guide the audit.
+            </label>
+            <div class="likert-scale flex justify-between">
+              <label
+                ><input
+                  type="radio"
+                  name="control"
+                  value="1"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('control', event.target.value)}
+                /> Strongly Disagree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="control"
+                  value="2"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('control', event.target.value)}
+                /> Disagree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="control"
+                  value="3"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('control', event.target.value)}
+                /> Neutral</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="control"
+                  value="4"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('control', event.target.value)}
+                /> Agree</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="control"
+                  value="5"
+                  disabled={disableInputs}
+                  on:change={(event) => saveResponse('control', event.target.value)}
+                /> Strongly Agree</label
+              >
+            </div>
+          </div>
+
+          <div class="form-control">
+            <label class="label font-medium text-sm">
+              10. Is there anything else you would like to share about your experience?
+            </label>
+            <textarea
+              name="additional-comments"
+              placeholder="Add your comments here..."
+              class="textarea textarea-bordered textarea-xs"
+              disabled={disableInputs}
+              on:input={(event) => saveResponse('additional-comments', event.target.value)}
+            ></textarea>
+          </div>
+        </form>
+      </section>
+    </div>
     <div class="text-center mt-8">
-      <button on:click={captureASI} class="btn btn-primary" disabled={!canSubmit}>Submit</button>
+      <button on:click={capturePQResponses} class="btn btn-primary" disabled={!canSubmit}
+        >Submit</button
+      >
     </div>
   </div>
 </div>
@@ -541,25 +913,20 @@
     background-color: #ffffff;
   }
 
-  .carousel {
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    padding: 10px;
-    padding-bottom: 15px;
+  .container {
+    text-align: center;
   }
 
-  .carousel-item {
-    flex: none;
-    scroll-snap-align: start;
+  .bg-white {
+    max-width: 700px;
+    margin: 0 auto;
   }
 
   .likert-scale label {
     display: inline-block;
     text-align: center;
     width: 14%;
-    font-size: 0.7rem;
+    font-size: 0.85rem;
   }
 
   .likert-scale input {
@@ -574,23 +941,13 @@
   .likert-scale span {
     width: 20%;
     text-align: center;
-    font-size: 0.7rem;
+    font-weight: bold;
   }
-
-  .radio-options label {
-    display: inline-block;
-    text-align: center;
-    width: 14%;
-    font-size: 0.7rem;
-  }
-
   .sticky-container {
     position: sticky;
     top: 0;
     background-color: white;
     z-index: 10;
-    padding: 20px 10px 1px 10px;
-    margin-bottom: 10px;
+    padding: 10px 10px 1px 10px;
   }
-
 </style>
