@@ -11,6 +11,10 @@
 
   let userCondition = 'conditionTwo';
 
+  $: isConditionPage = currentRoute.includes(`/${userCondition}`);
+
+
+
   const steps = [
     { path: '/pre-questionnaire', label: 'Step 1' },
     { path: '/ASI-questionnaire', label: 'Step 2' },
@@ -28,7 +32,7 @@
     alert('Help information goes here!');
   }
 
-  let overallTimeLeft = 30; // Default time in seconds
+  let overallTimeLeft = 30; 
   let timerInterval: NodeJS.Timer | null = null;
 
   function formatTime(seconds: number): string {
@@ -72,14 +76,13 @@
 
   onMount(() => {
     return () => {
-      // Clean up the timer on component unmount
       stopCountdown();
     };
   });
 
 </script>
 
-<div class="layout-container">
+<div class="layout-container"  style="height: {isConditionPage ? '100vh' : 'auto'}">
   {#if currentStepIndex !== -1}
     <div class="progress-container">
       <div class="progress-wrapper">
@@ -122,7 +125,6 @@
   .layout-container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
     background-color: #ffffff;
     position: relative;
   }

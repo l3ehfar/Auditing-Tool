@@ -21,6 +21,8 @@
 
       const userId = user.id;
 
+      localStorage.clear(); 
+
       localStorage.setItem('userId', userId);
       localStorage.setItem('lastUserId', userId);
 
@@ -41,6 +43,8 @@
       localStorage.removeItem('asiTimeLeft');
       localStorage.removeItem('disableInputs');
       localStorage.removeItem(`ASI-${user.id}`);
+      localStorage.removeItem(`PQ-${user.id}`);
+      localStorage.removeItem('PQTimeLeft');
 
       success = true;
 

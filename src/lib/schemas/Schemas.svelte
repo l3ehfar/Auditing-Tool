@@ -15,6 +15,7 @@
   const timerDisplay = writable(overallTimeLeft);
   let isSubmitDisabled = true;
   let showSubmitButton = false;
+  let isTimerFinished = false;
 
   function saveCardsState() {
     if (userId) {
@@ -51,15 +52,12 @@
 
   function checkIfSubmitEnabled() {
     const allCards = get(cards);
-
-    // Check if any required question is unanswered
     isSubmitDisabled = allCards.some((card) =>
       Object.values(card.questionnaire)
-        .slice(0, 4) // Check only the first four questions
+        .slice(0, 4) //only the first four questions
         .some((value) => !value.trim()),
     );
 
-    // If no questions are missing, ensure the button is enabled
     if (!isSubmitDisabled && showSubmitButton) {
       notification({
         title: 'Ready to Submit',
@@ -68,6 +66,7 @@
       });
     }
   }
+
   cards.subscribe(() => {
     checkIfSubmitEnabled();
   });
@@ -81,6 +80,7 @@
     timerDisplay.set(overallTimeLeft);
 
     if (overallTimeLeft <= 0) {
+      isTimerFinished = true;
       showSubmitButton = true;
       checkIfSubmitEnabled();
     }
@@ -100,7 +100,7 @@
         }
       } else {
         clearInterval(timer);
-
+        isTimerFinished = true;
         showSubmitButton = true;
         checkIfSubmitEnabled();
 
@@ -131,6 +131,7 @@
   }
 
   function addCard() {
+    if (isTimerFinished) return;
     cards.update((currentCards) => [
       ...currentCards,
       {
@@ -268,7 +269,7 @@
 <div class="marcelle-card">
   <div class="container">
     <div class="button-row">
-      <button class="btn btn-xs btn-primary" on:click={addCard}>New Hypothesis</button>
+      <button class="btn btn-xs btn-primary" on:click={addCard} disabled={isTimerFinished}>New Hypothesis</button>
     </div>
 
     {#each $cards as card (card.id)}
@@ -277,6 +278,7 @@
           <button
             class="btn btn-xs btn-circle absolute top-2 right-2"
             on:click={() => removeCard(card.id)}
+            disabled={isTimerFinished}
           >
             x
           </button>
@@ -285,6 +287,7 @@
             bind:value={card.text}
             class="textarea textarea-xs textarea-accent textarea-bordered w-full"
             placeholder="Add your hypothesis here"
+            disabled={isTimerFinished}
           ></textarea>
 
           {#if card.items.length === 0}
@@ -296,20 +299,22 @@
 
           <div
             class="grid grid-cols-5 gap-2 p-4 border border-dashed border-gray-300 rounded-lg min-h-[100px]"
-            on:drop={(event) => onDrop(event, card)}
-            on:dragover={allowDrop}
+            class:disabled={isTimerFinished}
+            on:drop={(event) => isTimerFinished || onDrop(event, card)}
+            on:dragover={(event) => isTimerFinished || allowDrop(event)}
           >
             {#each card.items as item (item.id)}
               <div
                 class="dropped-item p-1 bg-gray-100 border border-gray-300 rounded-md text-center relative"
-                draggable="true"
-                on:dragstart={(event) => handleDragStart(event, card.id, item)}
+                draggable={!isTimerFinished}
+                on:dragstart={(event) => isTimerFinished || handleDragStart(event, card.id, item)}
                 on:drop={(event) => handleDropOnItem(event, card.id, item.id)}
                 on:dragover={allowDrop}
               >
                 <button
                   class="items-btn btn btn-xs btn-circle absolute top-1 right-1"
                   on:click={() => removeItem(card.id, item.id)}
+                  disabled={isTimerFinished}
                 >
                   x
                 </button>
@@ -326,7 +331,7 @@
 
               <div class="form-control mb-4">
                 <label class="label font-medium text-sm">
-                  How confident are you about this hypothesis?
+                  How confident are you about this hypothesis? <span>*</span>
                 </label>
                 <div class="likert-scale flex justify-between">
                   <label>
@@ -379,7 +384,7 @@
 
               <div class="form-control mb-4">
                 <label class="label font-medium text-sm">
-                  Did you find any examples that go against your hypothesis?
+                  Did you find any examples that go against your hypothesis? <span>*</span>
                 </label>
                 <div class="radio-options flex space-x-4">
                   <label>
@@ -405,7 +410,7 @@
 
               <div class="form-control mb-4">
                 <label class="label font-medium text-sm">
-                  How often does the bias described in your hypothesis occur?
+                  How often does the bias described in your hypothesis occur? <span>*</span>
                 </label>
                 <div class="likert-scale flex justify-between">
                   <label>
@@ -458,7 +463,7 @@
 
               <div class="form-control mb-4">
                 <label class="label font-medium text-sm">
-                  How problematic is the bias described in your hypothesis?
+                  How harmful is the bias described in your hypothesis? <span>*</span>
                 </label>
                 <div class="likert-scale flex justify-between">
                   <label>
@@ -468,7 +473,7 @@
                       value="1"
                       bind:group={card.questionnaire.question4}
                     />
-                    Not problematic
+                    Not harmful
                   </label>
                   <label>
                     <input
@@ -477,7 +482,7 @@
                       value="2"
                       bind:group={card.questionnaire.question4}
                     />
-                    Slightly problematic
+                    Slightly harmful
                   </label>
                   <label>
                     <input
@@ -486,7 +491,7 @@
                       value="3"
                       bind:group={card.questionnaire.question4}
                     />
-                    Somewhat problematic
+                    Somewhat harmful
                   </label>
                   <label>
                     <input
@@ -495,7 +500,7 @@
                       value="4"
                       bind:group={card.questionnaire.question4}
                     />
-                    Problematic
+                    Harmful
                   </label>
                   <label>
                     <input
@@ -504,7 +509,7 @@
                       value="5"
                       bind:group={card.questionnaire.question4}
                     />
-                    Very problematic
+                    Very harmful
                   </label>
                 </div>
               </div>
@@ -526,14 +531,26 @@
       </div>
     {/each}
     {#if showSubmitButton}
+    {#if isSubmitDisabled}
+      <div class="tooltip tooltip-right tooltip-accent" data-tip="Please answer all mandatory questions">
+        <button
+          class="btn btn-xs btn-accent mt-4"
+          on:click={submitFinalResults}
+          disabled
+        >
+          Submit Final Results
+        </button>
+      </div>
+    {:else}
       <button
-        class="btn btn-xs btn-success mt-4"
+        class="btn btn-xs btn-accent mt-4"
         on:click={submitFinalResults}
-        disabled={isSubmitDisabled}
       >
         Submit Final Results
       </button>
     {/if}
+  {/if}
+  
   </div>
 </div>
 
@@ -657,6 +674,10 @@
     text-align: center;
     width: 30%;
     font-size: 0.7rem;
+  }
+
+  .form-control span {
+    color: red;
   }
 
   .form-control {

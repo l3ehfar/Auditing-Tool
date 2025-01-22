@@ -621,8 +621,7 @@
     top: 0;
     background-color: white;
     z-index: 10;
-    padding: 20px 10px 1px 10px;
-    margin-bottom: 200px;
+    padding: 10px 10px 1px 10px;
     /* box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);  */
   }
 </style>
