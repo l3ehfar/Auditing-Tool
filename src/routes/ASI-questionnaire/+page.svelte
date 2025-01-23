@@ -40,7 +40,6 @@
     const savedResponses = JSON.parse(localStorage.getItem(`ASI-${userId}`) || '{}');
     savedResponses[question] = value;
     localStorage.setItem(`ASI-${userId}`, JSON.stringify(savedResponses));
-    console.log(`Saved response for ${question}: ${value}`);
     checkProgress();
   }
 
