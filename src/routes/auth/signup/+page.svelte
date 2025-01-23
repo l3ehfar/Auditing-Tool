@@ -5,7 +5,7 @@
   let name = '';
   let email = '';
   let password = '';
-  let error: string | null = null; 
+  let error: string | null = null;
   let success = false;
 
   async function signup(event: SubmitEvent) {
@@ -14,37 +14,19 @@
     success = false;
 
     console.log('Signup initiated:', { name, email });
- 
+
     try {
       const user = await store.service('users').create({ name, email, password });
       console.log('Signup successful:', user);
 
       const userId = user.id;
 
-      localStorage.clear(); 
+      localStorage.clear();
 
       localStorage.setItem('userId', userId);
       localStorage.setItem('lastUserId', userId);
-
-      localStorage.removeItem('schemasCards');
-      localStorage.removeItem('schemasTimer');
-
-      localStorage.removeItem('affinityDiagramRectangles');
-      localStorage.removeItem('affinityDiagramDroppedItems');
-      localStorage.removeItem('overalltimeleft');
-      localStorage.removeItem('timeleft');
-      localStorage.removeItem('buttonAppearance');
-      
-
-      localStorage.removeItem('preQTimeLeft');
-      localStorage.removeItem('disableInputs');
-      localStorage.removeItem(`preQuestionnaire-${user.id}`);
-
-      localStorage.removeItem('asiTimeLeft');
-      localStorage.removeItem('disableInputs');
-      localStorage.removeItem(`ASI-${user.id}`);
-      localStorage.removeItem(`PQ-${user.id}`);
-      localStorage.removeItem('PQTimeLeft');
+      localStorage.setItem('disableInputs', 'false'); 
+      localStorage.setItem('PQTimeLeft', '30');
 
       success = true;
 
