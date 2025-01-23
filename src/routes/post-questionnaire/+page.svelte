@@ -70,9 +70,9 @@
       console.log('New user detected. Resetting timer and states.');
       PQTimeLeft = 30;
       disableInputs = false;
+      localStorage.setItem('disableInputs', 'false');
 
       localStorage.removeItem('PQTimeLeft');
-      localStorage.removeItem('disableInputs');
 
       localStorage.setItem('lastUserId', userId);
     } else {
@@ -110,7 +110,12 @@
           } else {
             disableInputs = true;
             localStorage.setItem('disableInputs', 'true');
-            // captureASIResponses();
+            notification({
+              title: 'Success',
+              message: 'Time expired, but all questions are answered.',
+              duration: 3000,
+              type: 'success',
+            });
           }
         }
       }, 1000);
