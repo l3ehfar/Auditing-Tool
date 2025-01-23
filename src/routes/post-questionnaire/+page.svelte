@@ -78,10 +78,8 @@
     } else {
       console.log('Returning user detected. Loading saved data.');
       const savedTime = parseInt(localStorage.getItem('PQTimeLeft') || '30');
-      const savedDisableState = localStorage.getItem('disableInputs') === 'true';
 
       PQTimeLeft = savedTime;
-      disableInputs = savedDisableState;
     }
 
     loadUserData(userId);
@@ -108,13 +106,10 @@
               type: 'danger',
             });
           } else {
-            disableInputs = true;
-            localStorage.setItem('disableInputs', 'true');
             notification({
               title: 'Success',
               message: 'Time expired, but all questions are answered.',
               duration: 3000,
-              type: 'success',
             });
           }
         }
@@ -223,47 +218,12 @@
     console.log('Saved PQ responses:', responses);
     notification({
       title: 'Answers Submitted',
-      message: 'Your answers have been successfully submitted.',
-      duration: 3000,
+      message: 'Your answers have been successfully submitted. You will be directed to the Prolific dashboard.',
+      duration: 10000,
     });
   }
 
-  function resetTimer() {
-    clearInterval(timerInterval);
-    PQTimeLeft = 30;
-    disableInputs = false;
-    localStorage.removeItem('PQTimeLeft');
-    localStorage.removeItem('disableInputs');
-
-    const formControls = document.querySelectorAll('.form-control');
-    formControls.forEach((control) => {
-      control.style.border = '';
-    });
-
-    timerInterval = setInterval(() => {
-      if (PQTimeLeft > 0) {
-        PQTimeLeft -= 1;
-        localStorage.setItem('PQTimeLeft', PQTimeLeft.toString());
-      } else {
-        clearInterval(timerInterval);
-
-        const unansweredQuestions = highlightUnansweredQuestions();
-
-        if (unansweredQuestions.length > 0) {
-          notification({
-            title: 'Error',
-            message: 'Please answer all questions before time runs out.',
-            duration: 5000,
-            type: 'danger',
-          });
-        } else {
-          disableInputs = true;
-          localStorage.setItem('disableInputs', 'true');
-          capturePQResponses();
-        }
-      }
-    }, 1000);
-  }
+ 
 </script>
 
 <div class="bg-base-100 min-h-screen p-4 flex items-center justify-center">
