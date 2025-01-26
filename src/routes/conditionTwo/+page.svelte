@@ -43,6 +43,7 @@
       }
     }
   }
+  
 
   function updateBrushSettings() {
     if (canvas && canvas.freeDrawingBrush) {
@@ -89,6 +90,11 @@
     const width = 200;
     const height = 200;
 
+    if (canvas) {
+      canvas.dispose();
+      canvas = null;
+    }
+
     canvas = new fabric.Canvas(canvasEl, {
       isDrawingMode: false,
       width: width,
@@ -115,12 +121,20 @@
   });
 
   onDestroy(() => {
+    if (canvas) {
+      canvas.dispose();
+      canvas = null;
+    }
+
+    if (dragOverlay) {
+      dragOverlay.removeEventListener('dragstart', onDragStart);
+    }
+
     if (cleanup) cleanup();
   });
 
   function loadImageToCanvas(img: ImageData) {
     if (canvas) {
-      // Clear the canvas before loading a new image
       canvas.clear();
 
       const tempCanvas = document.createElement('canvas');

@@ -8,15 +8,17 @@
   let error: string | null = null;
   let success = false;
 
+  let condition = '';
+
   async function signup(event: SubmitEvent) {
     event.preventDefault();
     error = null;
     success = false;
 
-    console.log('Signup initiated:', { name, email });
+    console.log('Signup initiated:', { name, email, condition });
 
     try {
-      const user = await store.service('users').create({ name, email, password });
+      const user = await store.service('users').create({ name, email, password, condition });
       console.log('Signup successful:', user);
 
       const userId = user.id;
@@ -25,7 +27,8 @@
 
       localStorage.setItem('userId', userId);
       localStorage.setItem('lastUserId', userId);
-      localStorage.setItem('disableInputs', 'false'); 
+      localStorage.setItem('userCondition', condition);
+      localStorage.setItem('disableInputs', 'false');
       localStorage.setItem('PQTimeLeft', '30');
 
       success = true;
@@ -50,6 +53,14 @@
     <input type="text" bind:value={name} placeholder="Name" required />
     <input type="email" bind:value={email} placeholder="Email" required />
     <input type="password" bind:value={password} placeholder="Password" required minlength="8" />
+
+    <select bind:value={condition} required>
+      <option value="" disabled selected>Select your condition</option>
+      <option value="conditionOne">Condition One</option>
+      <option value="conditionTwo">Condition Two</option>
+      <option value="conditionThree">Condition Three</option>
+    </select>
+
     <button type="submit">Sign Up</button>
   </form>
 </section>

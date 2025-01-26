@@ -3,14 +3,16 @@
   import { onMount } from 'svelte';
   import { notification } from '@marcellejs/core';
 
-  let asiTimeLeft = 30;
-  let totalQuestions = 4;
+  let asiTimeLeft = 300;
+  let totalQuestions = 22;
   let answeredQuestions = 0;
   let progress = 0;
   let canSubmit = false;
   let disableInputs = false;
 
   let timerInterval: NodeJS.Timer;
+
+  let userCondition: string | null = localStorage.getItem('userCondition');
 
   async function loadUserData(userId: string) {
     try {
@@ -55,16 +57,17 @@
     }
 
     console.log('Logged-in user ID:', userId);
+    console.log('User condition:', userCondition);
 
     if (alreadySubmitted) {
       console.log('ASI questionnaire already submitted. Redirecting...');
-      goto('/conditionTwo');
+      goto(`/${userCondition}`);
       return;
     }
 
     if (userId !== lastUserId) {
       console.log('New user detected. Resetting timer and states.');
-      asiTimeLeft = 30;
+      asiTimeLeft = 300;
       disableInputs = false;
 
       localStorage.removeItem('asiTimeLeft');
@@ -73,7 +76,7 @@
       localStorage.setItem('lastUserId', userId);
     } else {
       console.log('Returning user detected. Loading saved data.');
-      const savedTime = parseInt(localStorage.getItem('asiTimeLeft') || '30');
+      const savedTime = parseInt(localStorage.getItem('asiTimeLeft') || '300');
       const savedDisableState = localStorage.getItem('disableInputs') === 'true';
 
       asiTimeLeft = savedTime;
@@ -106,7 +109,6 @@
           } else {
             disableInputs = true;
             localStorage.setItem('disableInputs', 'true');
-            // captureASIResponses();
           }
         }
       }, 1000);
@@ -167,55 +169,123 @@
       return;
     }
 
-    const responses: { [key: string]: string } = {};
+    const responses: Record<string, number> = {};
     const radios = document.querySelectorAll('form input[type="radio"]:checked');
     radios.forEach((radio: HTMLInputElement) => {
-      responses[radio.name] = radio.value;
+      responses[radio.name] = parseInt(radio.value, 10);
     });
 
-    localStorage.setItem(`ASI-${userId}`, JSON.stringify(responses));
-    localStorage.setItem(`ASISubmitted-${userId}`, 'true'); 
-    console.log('Saved ASI responses:', responses);
+    const { hostileSexism, benevolentSexism, totalScore } = calculateASIResults(responses);
 
-    goto('/conditionTwo');
+    const dataToSave = {
+      responses,
+      scores: {
+        hostileSexism: hostileSexism.toFixed(2),
+        benevolentSexism: benevolentSexism.toFixed(2),
+        totalScore: totalScore.toFixed(2),
+      },
+    };
+
+    localStorage.setItem(`ASI-${userId}`, JSON.stringify(dataToSave));
+    localStorage.setItem(`ASISubmitted-${userId}`, 'true');
+
+    console.log('Saved ASI responses and scores:', dataToSave);
+
+    goto(`/${userCondition}`);
   }
 
-  function resetTimer() {
-    clearInterval(timerInterval);
-    asiTimeLeft = 30;
-    disableInputs = false;
-    localStorage.removeItem('asiTimeLeft');
-    localStorage.removeItem('disableInputs');
+  function calculateASIResults(responses: Record<string, number>): {
+    hostileSexism: number;
+    benevolentSexism: number;
+    totalScore: number;
+  } {
+    const reverseCodedItems = ['q3', 'q6', 'q7', 'q13', 'q18', 'q21'];
 
-    const formControls = document.querySelectorAll('.form-control');
-    formControls.forEach((control) => {
-      control.style.border = '';
-    });
+    const hostileSexismItems = [
+      'q2',
+      'q4',
+      'q5',
+      'q7',
+      'q10',
+      'q11',
+      'q14',
+      'q15',
+      'q16',
+      'q18',
+      'q21',
+    ];
+    const benevolentSexismItems = [
+      'q1',
+      'q3',
+      'q6',
+      'q8',
+      'q9',
+      'q12',
+      'q13',
+      'q17',
+      'q19',
+      'q20',
+      'q22',
+    ];
 
-    timerInterval = setInterval(() => {
-      if (asiTimeLeft > 0) {
-        asiTimeLeft -= 1;
-        localStorage.setItem('asiTimeLeft', asiTimeLeft.toString());
-      } else {
-        clearInterval(timerInterval);
+    const adjustedResponses = Object.fromEntries(
+      Object.entries(responses).map(([key, value]) => [
+        key,
+        reverseCodedItems.includes(key) ? 5 - value : value,
+      ]),
+    );
 
-        const unansweredQuestions = highlightUnansweredQuestions();
+    const hostileSexismScores = hostileSexismItems.map((key) => adjustedResponses[key] || 0);
+    const hostileSexism =
+      hostileSexismScores.reduce((sum, value) => sum + value, 0) / hostileSexismScores.length;
 
-        if (unansweredQuestions.length > 0) {
-          notification({
-            title: 'Error',
-            message: 'Please answer all questions before time runs out.',
-            duration: 5000,
-            type: 'danger',
-          });
-        } else {
-          disableInputs = true;
-          localStorage.setItem('disableInputs', 'true');
-          captureASIResponses();
-        }
-      }
-    }, 1000);
+    const benevolentSexismScores = benevolentSexismItems.map((key) => adjustedResponses[key] || 0);
+    const benevolentSexism =
+      benevolentSexismScores.reduce((sum, value) => sum + value, 0) / benevolentSexismScores.length;
+
+    const allItems = [...hostileSexismItems, ...benevolentSexismItems];
+    const allScores = allItems.map((key) => adjustedResponses[key] || 0);
+    const totalScore = allScores.reduce((sum, value) => sum + value, 0) / allScores.length;
+
+    return { hostileSexism, benevolentSexism, totalScore };
   }
+
+  // function resetTimer() {
+  //   clearInterval(timerInterval);
+  //   asiTimeLeft = 30;
+  //   disableInputs = false;
+  //   localStorage.removeItem('asiTimeLeft');
+  //   localStorage.removeItem('disableInputs');
+
+  //   const formControls = document.querySelectorAll('.form-control');
+  //   formControls.forEach((control) => {
+  //     control.style.border = '';
+  //   });
+
+  //   timerInterval = setInterval(() => {
+  //     if (asiTimeLeft > 0) {
+  //       asiTimeLeft -= 1;
+  //       localStorage.setItem('asiTimeLeft', asiTimeLeft.toString());
+  //     } else {
+  //       clearInterval(timerInterval);
+
+  //       const unansweredQuestions = highlightUnansweredQuestions();
+
+  //       if (unansweredQuestions.length > 0) {
+  //         notification({
+  //           title: 'Error',
+  //           message: 'Please answer all questions before time runs out.',
+  //           duration: 5000,
+  //           type: 'danger',
+  //         });
+  //       } else {
+  //         disableInputs = true;
+  //         localStorage.setItem('disableInputs', 'true');
+  //         captureASIResponses();
+  //       }
+  //     }
+  //   }, 1000);
+  // }
 </script>
 
 <div class="bg-base-100 min-h-screen p-4 flex items-center justify-center">
@@ -243,7 +313,13 @@
               <span>Disagree strongly</span>
               {#each [0, 1, 2, 3, 4, 5] as value}
                 <label>
-                  <input type="radio" name="q1" {value} disabled={disableInputs} on:change={() => saveResponse('q1', value.toString())} />
+                  <input
+                    type="radio"
+                    name="q1"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q1', value.toString())}
+                  />
                   {value}
                 </label>
               {/each}
@@ -259,7 +335,13 @@
               <span>Disagree strongly</span>
               {#each [0, 1, 2, 3, 4, 5] as value}
                 <label>
-                  <input type="radio" name="q2" {value} disabled={disableInputs} on:change={() => saveResponse('q2', value.toString())} />
+                  <input
+                    type="radio"
+                    name="q2"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q2', value.toString())}
+                  />
                   {value}
                 </label>
               {/each}
@@ -274,7 +356,13 @@
               <span>Disagree strongly</span>
               {#each [0, 1, 2, 3, 4, 5] as value}
                 <label>
-                  <input type="radio" name="q3" {value} disabled={disableInputs} on:change={() => saveResponse('q3', value.toString())} />
+                  <input
+                    type="radio"
+                    name="q3"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q3', value.toString())}
+                  />
                   {value}
                 </label>
               {/each}
@@ -289,129 +377,183 @@
               <span>Disagree strongly</span>
               {#each [0, 1, 2, 3, 4, 5] as value}
                 <label>
-                  <input type="radio" name="q4" {value} disabled={disableInputs} on:change={() => saveResponse('q4', value.toString())} />
+                  <input
+                    type="radio"
+                    name="q4"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q4', value.toString())}
+                  />
                   {value}
                 </label>
               {/each}
               <span>Agree strongly</span>
             </div>
           </div>
-          <!-- <div class="form-control">
-            <label class="label font-medium text-sm">5. Women are too easily offended. </label>
+          <div class="form-control">
+            <label class="label font-medium text-sm">5. Women are too easily offended.</label>
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q5" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q5" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q5" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q5" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q5" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q5" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input
+                    type="radio"
+                    name="q5"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q5', value.toString())}
+                  />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
           <div class="form-control">
             <label class="label font-medium text-sm"
               >6. People are often truly happy in life without being romantically involved with a
-              member of the other sex.
-            </label>
+              member of the other sex.</label
+            >
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q6" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q6" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q6" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q6" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q6" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q6" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input
+                    type="radio"
+                    name="q6"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q6', value.toString())}
+                  />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
           <div class="form-control">
             <label class="label font-medium text-sm"
-              >7. Feminists are not seeking for women to have more power than men.
-            </label>
+              >7. Feminists are not seeking for women to have more power than men.</label
+            >
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q7" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q7" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q7" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q7" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q7" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q7" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input
+                    type="radio"
+                    name="q7"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q7', value.toString())}
+                  />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
           <div class="form-control">
             <label class="label font-medium text-sm"
-              >8. Many women have a quality of purity that few men possess.
-            </label>
+              >8. Many women have a quality of purity that few men possess.</label
+            >
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q8" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q8" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q8" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q8" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q8" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q8" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input
+                    type="radio"
+                    name="q8"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q8', value.toString())}
+                  />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
           <div class="form-control">
             <label class="label font-medium text-sm"
-              >9. Women should be cherished and protected by men.
-            </label>
+              >9. Women should be cherished and protected by men.</label
+            >
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q9" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q9" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q9" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q9" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q9" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q9" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input
+                    type="radio"
+                    name="q9"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q9', value.toString())}
+                  />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
           <div class="form-control">
             <label class="label font-medium text-sm"
-              >10. Most women fail to appreciate fully all that men do for them.
-            </label>
+              >10. Most women fail to appreciate fully all that men do for them.</label
+            >
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q10" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q10" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q10" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q10" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q10" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q10" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input
+                    type="radio"
+                    name="q10"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q10', value.toString())}
+                  />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
           <div class="form-control">
             <label class="label font-medium text-sm"
-              >11. Women seek to gain power by getting control over men.
-            </label>
+              >11. Women seek to gain power by getting control over men.</label
+            >
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q11" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q11" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q11" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q11" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q11" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q11" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input
+                    type="radio"
+                    name="q11"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q11', value.toString())}
+                  />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
           <div class="form-control">
             <label class="label font-medium text-sm"
-              >12. Every man ought to have a woman whom he adores.
-            </label>
+              >12. Every man ought to have a woman whom he adores.</label
+            >
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q12" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q12" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q12" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q12" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q12" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q12" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input
+                    type="radio"
+                    name="q12"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q12', value.toString())}
+                  />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
@@ -419,12 +561,18 @@
             <label class="label font-medium text-sm">13. Men are complete without women. </label>
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q13" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q13" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q13" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q13" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q13" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q13" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input
+                    type="radio"
+                    name="q13"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q13', value.toString())}
+                  />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
@@ -434,59 +582,83 @@
             </label>
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q14" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q14" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q14" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q14" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q14" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q14" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input
+                    type="radio"
+                    name="q14"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q14', value.toString())}
+                  />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
           <div class="form-control">
             <label class="label font-medium text-sm"
               >15. Once a woman gets a man to commit to her, she usually tries to put him on a tight
-              leash.
-            </label>
+              leash.</label
+            >
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q15" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q15" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q15" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q15" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q15" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q15" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input
+                    type="radio"
+                    name="q15"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q15', value.toString())}
+                  />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
           <div class="form-control">
             <label class="label font-medium text-sm"
               >16. When women lose to men in a fair competition, they typically complain about being
-              discriminated against.
-            </label>
+              discriminated against.</label
+            >
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q16" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q16" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q16" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q16" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q16" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q16" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input
+                    type="radio"
+                    name="q16"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q16', value.toString())}
+                  />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
           <div class="form-control">
             <label class="label font-medium text-sm"
-              >17. A good woman should be set on a pedestal by her man.
-            </label>
+              >17. A good woman should be set on a pedestal by her man.</label
+            >
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q17" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q17" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q17" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q17" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q17" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q17" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input
+                    type="radio"
+                    name="q17"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q17', value.toString())}
+                  />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
@@ -497,12 +669,18 @@
             </label>
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q18" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q18" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q18" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q18" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q18" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q18" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input
+                    type="radio"
+                    name="q18"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q18', value.toString())}
+                  />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
@@ -512,63 +690,86 @@
             </label>
             <div class="likert-scale flex justify-between">
               <span>Disagree strongly</span>
-              <label><input type="radio" name="q19" value="0" disabled={disableinputs} /> 0</label>
-              <label><input type="radio" name="q19" value="1" disabled={disableinputs} /> 1</label>
-              <label><input type="radio" name="q19" value="2" disabled={disableinputs} /> 2</label>
-              <label><input type="radio" name="q19" value="3" disabled={disableinputs} /> 3</label>
-              <label><input type="radio" name="q19" value="4" disabled={disableinputs} /> 4</label>
-              <label><input type="radio" name="q19" value="5" disabled={disableinputs} /> 5</label>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input
+                    type="radio"
+                    name="q19"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q19', value.toString())}
+                  />
+                  {value}
+                </label>
+              {/each}
               <span>Agree strongly</span>
             </div>
           </div>
-        </div>
-        <div class="form-control">
-          <label class="label font-medium text-sm"
-            >20. Men should be willing to sacrifice their own well being in order to provide
-            financially for the women in their lives.
-          </label>
-          <div class="likert-scale flex justify-between">
-            <span>Disagree strongly</span>
-            <label><input type="radio" name="q20" value="0" disabled={disableinputs} /> 0</label>
-            <label><input type="radio" name="q20" value="1" disabled={disableinputs} /> 1</label>
-            <label><input type="radio" name="q20" value="2" disabled={disableinputs} /> 2</label>
-            <label><input type="radio" name="q20" value="3" disabled={disableinputs} /> 3</label>
-            <label><input type="radio" name="q20" value="4" disabled={disableinputs} /> 4</label>
-            <label><input type="radio" name="q20" value="5" disabled={disableinputs} /> 5</label>
-            <span>Agree strongly</span>
+          <div class="form-control">
+            <label class="label font-medium text-sm"
+              >20. Men should be willing to sacrifice their own well being in order to provide
+              financially for the women in their lives.</label
+            >
+            <div class="likert-scale flex justify-between">
+              <span>Disagree strongly</span>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input
+                    type="radio"
+                    name="q20"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q20', value.toString())}
+                  />
+                  {value}
+                </label>
+              {/each}
+              <span>Agree strongly</span>
+            </div>
           </div>
-        </div>
-        <div class="form-control">
-          <label class="label font-medium text-sm"
-            >21. Feminists are making entirely reasonable demands of men.
-          </label>
-          <div class="likert-scale flex justify-between">
-            <span>Disagree strongly</span>
-            <label><input type="radio" name="q21" value="0" disabled={disableinputs} /> 0</label>
-            <label><input type="radio" name="q21" value="1" disabled={disableinputs} /> 1</label>
-            <label><input type="radio" name="q21" value="2" disabled={disableinputs} /> 2</label>
-            <label><input type="radio" name="q21" value="3" disabled={disableinputs} /> 3</label>
-            <label><input type="radio" name="q21" value="4" disabled={disableinputs} /> 4</label>
-            <label><input type="radio" name="q21" value="5" disabled={disableinputs} /> 5</label>
-            <span>Agree strongly</span>
+          <div class="form-control">
+            <label class="label font-medium text-sm"
+              >21. Feminists are making entirely reasonable demands of men.</label
+            >
+            <div class="likert-scale flex justify-between">
+              <span>Disagree strongly</span>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input
+                    type="radio"
+                    name="q21"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q21', value.toString())}
+                  />
+                  {value}
+                </label>
+              {/each}
+              <span>Agree strongly</span>
+            </div>
           </div>
-        </div>
-        <div class="form-control">
-          <label class="label font-medium text-sm"
-            >22. Women, as compared to men, tend to have a more refined sense of culture and good
-            taste.
-          </label>
-          <div class="likert-scale flex justify-between">
-            <span>Disagree strongly</span>
-            <label><input type="radio" name="q22" value="0" disabled={disableinputs} /> 0</label>
-            <label><input type="radio" name="q22" value="1" disabled={disableinputs} /> 1</label>
-            <label><input type="radio" name="q22" value="2" disabled={disableinputs} /> 2</label>
-            <label><input type="radio" name="q22" value="3" disabled={disableinputs} /> 3</label>
-            <label><input type="radio" name="q22" value="4" disabled={disableinputs} /> 4</label>
-            <label><input type="radio" name="q22" value="5" disabled={disableinputs} /> 5</label>
-            <span>Agree strongly</span>
+          <div class="form-control">
+            <label class="label font-medium text-sm"
+              >22. Women, as compared to men, tend to have a more refined sense of culture and good
+              taste.</label
+            >
+            <div class="likert-scale flex justify-between">
+              <span>Disagree strongly</span>
+              {#each [0, 1, 2, 3, 4, 5] as value}
+                <label>
+                  <input
+                    type="radio"
+                    name="q22"
+                    {value}
+                    disabled={disableInputs}
+                    on:change={() => saveResponse('q22', value.toString())}
+                  />
+                  {value}
+                </label>
+              {/each}
+              <span>Agree strongly</span>
+            </div>
           </div>
-        </div> -->
         </div>
       </form>
     </div>

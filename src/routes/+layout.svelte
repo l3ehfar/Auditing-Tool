@@ -9,11 +9,9 @@
   let currentRoute = '';
   $: currentRoute = $page.url.pathname;
 
-  let userCondition = 'conditionTwo';
+  let userCondition = localStorage.getItem('userCondition');
 
-  $: isConditionPage = currentRoute.includes(`/${userCondition}`);
-
-
+  $: isConditionPage = userCondition ? currentRoute.includes(`/${userCondition}`) : false;
 
   const steps = [
     { path: '/pre-questionnaire', label: 'Step 1' },
@@ -32,11 +30,13 @@
     alert('Help information goes here!');
   }
 
-  let overallTimeLeft = 30; 
+  let overallTimeLeft = 1800;
   let timerInterval: NodeJS.Timer | null = null;
 
   function formatTime(seconds: number): string {
-    const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const minutes = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, '0');
     const secs = (seconds % 60).toString().padStart(2, '0');
     return `${minutes}:${secs}`;
   }
@@ -63,13 +63,20 @@
   }
 
   $: {
-    if (currentRoute.includes(userCondition)) {
-      // User is on `conditionTwo` page
+    if (
+      currentRoute.includes('/conditionOne') ||
+      currentRoute.includes('/conditionTwo') ||
+      currentRoute.includes('/conditionThree')
+    ) {
+      if (!localStorage.getItem('hasReloadedConditionTwo')) {
+        localStorage.setItem('hasReloadedConditionTwo', 'true');
+        location.reload();
+      }
       const savedTimer = localStorage.getItem('schemasTimer');
       overallTimeLeft = savedTimer ? JSON.parse(savedTimer) : overallTimeLeft;
       startCountdown();
     } else {
-      // User is not on `conditionTwo` page
+      localStorage.removeItem('hasReloadedConditionTwo');
       stopCountdown();
     }
   }
@@ -79,10 +86,9 @@
       stopCountdown();
     };
   });
-
 </script>
 
-<div class="layout-container"  style="height: {isConditionPage ? '100vh' : 'auto'}">
+<div class="layout-container" style="height: {isConditionPage ? '100vh' : 'auto'}">
   {#if currentStepIndex !== -1}
     <div class="progress-container">
       <div class="progress-wrapper">
@@ -90,7 +96,7 @@
           Step {currentStepIndex + 1} / {steps.length}
         </div>
         <progress class="progress progress-accent" value={progressPercentage} max="100"></progress>
-        {#if currentRoute.includes('condition')}
+        {#if userCondition && currentRoute.includes(`/${userCondition}`)}
           <div class="timer-container">
             <span class="timer">{formatTime(overallTimeLeft)}</span>
             <button class="btn btn-xs btn-secondary" on:click={showHelp}>Help</button>
@@ -100,7 +106,39 @@
     </div>
   {/if}
 
-  {#if currentStepIndex === -1 || (currentRoute !== '/post-questionnaire' && currentRoute !== '/pre-questionnaire' && currentRoute !== '/ASI-questionnaire' && currentRoute !== '/auth/signup' && currentRoute !== '/auth/login')}
+  {#if overallTimeLeft === 0 && currentRoute === '/post-questionnaire'}
+    <div class="routed-full">
+      <slot />
+    </div>
+  {:else if overallTimeLeft === 0}
+    <div class="timeout-message">
+      <div class="right-panel">
+        <Schemas />
+      </div>
+    </div>
+  {:else if currentRoute === '/pre-questionnaire' || currentRoute === '/ASI-questionnaire' || currentRoute === '/post-questionnaire'}
+    <div class="routed-full">
+      <slot />
+    </div>
+  {:else if currentRoute === '/auth/signup' || currentRoute === '/auth/login'}
+    <div class="auth-layout">
+      <slot />
+    </div>
+  {:else if currentRoute === '/conditionThree'}
+  <div class="main-section">
+    <div class="left-panel">
+      <div class="slot-section">
+        <slot />
+      </div>
+      <div class="dataset-section">
+        <Dataset />
+      </div>
+    </div>
+    <div class="right-panel">
+      <Schemas />
+    </div>
+  </div>
+  {:else}
     <div class="main-section">
       <div class="left-panel">
         <div class="slot-section">
@@ -113,10 +151,6 @@
       <div class="right-panel">
         <Schemas />
       </div>
-    </div>
-  {:else}
-    <div class="routed-full">
-      <slot />
     </div>
   {/if}
 </div>
@@ -132,7 +166,7 @@
   .progress-container {
     position: fixed;
     top: 7px;
-    left: 20px;
+    left: 12px;
     background-color: rgba(255, 255, 255, 0.9);
     box-shadow: 0px 1px 5px rgba(0, 0, 0, 0.2);
     border-radius: 8px;
@@ -172,6 +206,7 @@
   .btn {
     font-weight: 100;
   }
+
   .main-section {
     display: flex;
     flex: 1;
@@ -214,5 +249,16 @@
     justify-content: center;
     align-items: center;
     height: 100%;
+  }
+
+  .timeout-message {
+    text-align: center;
+    padding: 1rem;
+    margin: 1rem;
+  }
+
+  .timeout-message p {
+    font-size: 1rem;
+    color: #666;
   }
 </style>

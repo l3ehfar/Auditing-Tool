@@ -73,7 +73,7 @@
 
   if (selectedWord && !uniqueWords.has(selectedWord)) {
     uniqueWords.add(selectedWord);
-    selectedWord = ''; // Clear selection
+    selectedWord = ''; 
   }
 
   if (customWord.trim() && !uniqueWords.has(customWord)) {
@@ -82,7 +82,7 @@
   }
 
   selectedWordsList = Array.from(uniqueWords);
-  filterDatasetBySelectedWords(); // Apply filter immediately
+  filterDatasetBySelectedWords(); 
 }
 
 
@@ -184,7 +184,6 @@
     if ($dynamicClassLabel && $dynamicClassLabel !== previousLabel) {
       previousLabel = $dynamicClassLabel;
 
-      // Clear existing data
       processedCaptions.clear();
       nonGenderedWordFrequency = {};
       Object.keys(captionInstances).forEach((key) => (captionInstances[key] = {}));
@@ -267,7 +266,6 @@ function matchWord(word: string, target: string): boolean {
     return true;
   }
 
-  // Add more rules if needed, e.g., for words ending in "es" or irregular plurals
   if (word.endsWith('y') && target === word.slice(0, -1) + 'ies') {
     return true;
   }
@@ -283,11 +281,10 @@ function filterDatasetBySelectedWords() {
 
   let matchingInstances: string[] = [];
 
-  // Iterate over the captions and match words
+
   for (const [caption, instances] of Object.entries(captionInstances)) {
     const wordsInCaption = caption.toLowerCase().split(/\s+/);
 
-    // Check if the caption contains all selected words (or their variations)
     const containsAllSelectedWords = selectedWordsList.every((selectedWord) =>
       wordsInCaption.some((word) => matchWord(selectedWord, word))
     );
@@ -327,7 +324,7 @@ $: {
       > -->
       <div class="word-selection">
         <h3>Filter the dataset based on captions containing:</h3>
-        <div class="dropdown dropdown-right">
+        <!-- <div class="dropdown dropdown-right">
           <div
             tabindex="0"
             role="button"
@@ -361,18 +358,18 @@ $: {
               <li><a class="text-gray-400 cursor-not-allowed">No words available</a></li>
             </ul>
           {/if}
-        </div>
+        </div> -->
 
         <div class="add-word">
           <input
             type="text"
             bind:value={customWord}
-            placeholder="new word"
+            placeholder="word"
             class="input input-bordered input-xs w-full max-w-xs"
           />
-          <button on:click={handleWordSelection} class="btn btn-secondary btn-xs">Add Word</button>
+          <button on:click={handleWordSelection} class="btn btn-secondary btn-xs">Filter</button>
         </div>
-        <button on:click={resetDatasetFilter} class="btn btn-primary btn-xs">Reset Filter</button>
+        <!-- <button on:click={resetDatasetFilter} class="btn btn-primary btn-xs">Reset Filter</button> -->
         <div class="badge-container">
           {#each selectedWordsList as word (word)}
             <div class="badge badge-accent">
@@ -468,8 +465,9 @@ $: {
 
   h3 {
     color: var(--heading-color);
-    margin: 0px;
+    margin: 2px;
     font-size: small;
+    font-weight: 600;
     text-align: left;
   }
 
