@@ -68,14 +68,14 @@
 
   function onDragStart(event: DragEvent) {
     const canvasElement = document.querySelector('#fabric-canvas') as HTMLCanvasElement;
-    const currentCaption = caption.$value.get(); // Get the current caption
+    const currentCaption = caption.$value.get(); 
 
     if (canvasElement) {
-      const canvasUrl = canvasElement.toDataURL('image/png'); // Convert the canvas to an image URL (base64)
+      const canvasUrl = canvasElement.toDataURL('image/png'); 
       const data = JSON.stringify({
         type: 'image-caption',
         src: canvasUrl,
-        caption: currentCaption || 'No caption generated',
+        caption: currentCaption || 'Try Again',
       });
 
       event.dataTransfer?.setData('text/plain', data);
@@ -252,9 +252,11 @@
       <button class="btn btn-sm w-full" on:click={undoLastAction}>
         <FontAwesomeIcon icon={faRotateLeft} />
       </button>
+      <div class="tooltip tooltip-bottom tooltip-accent" data-tip="the model may take a few seconds to generate captions">
       <button class="btn btn-sm btn-secondary w-full" on:click={generateCaptionForCombinedImage}>
         Generate Caption
       </button>
+    </div>
     </div>
   </div>
 </div>

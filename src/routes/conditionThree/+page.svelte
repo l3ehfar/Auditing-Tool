@@ -69,22 +69,21 @@
   }
 
   function handleWordSelection() {
-  const uniqueWords = new Set(selectedWordsList);
+    const uniqueWords = new Set(selectedWordsList);
 
-  if (selectedWord && !uniqueWords.has(selectedWord)) {
-    uniqueWords.add(selectedWord);
-    selectedWord = ''; 
+    if (selectedWord && !uniqueWords.has(selectedWord)) {
+      uniqueWords.add(selectedWord);
+      selectedWord = '';
+    }
+
+    if (customWord.trim() && !uniqueWords.has(customWord)) {
+      uniqueWords.add(customWord.trim());
+      customWord = '';
+    }
+
+    selectedWordsList = Array.from(uniqueWords);
+    filterDatasetBySelectedWords();
   }
-
-  if (customWord.trim() && !uniqueWords.has(customWord)) {
-    uniqueWords.add(customWord.trim());
-    customWord = ''; 
-  }
-
-  selectedWordsList = Array.from(uniqueWords);
-  filterDatasetBySelectedWords(); 
-}
-
 
   $: if ($dynamicClassLabel) {
     selectedWords = [];
@@ -111,9 +110,9 @@
   }
 
   function removeWord(word: string) {
-  selectedWordsList = selectedWordsList.filter((w) => w !== word); // Remove the word
-  filterDatasetBySelectedWords(); 
-}
+    selectedWordsList = selectedWordsList.filter((w) => w !== word); // Remove the word
+    filterDatasetBySelectedWords();
+  }
 
   $: {
     if (selectedWordsList) {
@@ -138,7 +137,7 @@
             updateAggregatedPersonFrequency(instance.caption, instance);
           }
         });
-        updateFrequentWords(); 
+        updateFrequentWords();
       } else {
         console.warn('Dataset is empty.');
       }
@@ -243,7 +242,7 @@
       const data = JSON.stringify({
         type: 'image-caption',
         src: canvasUrl,
-        caption: currentCaption || 'No caption generated',
+        caption: currentCaption || 'Try Again',
       });
 
       event.dataTransfer?.setData('text/plain', data);
@@ -253,66 +252,68 @@
   }
 
   function normalizeWord(word: string): string {
-  return word.toLowerCase().trim();
-}
-
-function matchWord(word: string, target: string): boolean {
-  // Normalize both words
-  word = normalizeWord(word);
-  target = normalizeWord(target);
-
-  // Simple pluralization rules
-  if (word === target || word + 's' === target || word === target + 's') {
-    return true;
+    return word.toLowerCase().trim();
   }
 
-  if (word.endsWith('y') && target === word.slice(0, -1) + 'ies') {
-    return true;
+  function matchWord(word: string, target: string): boolean {
+    word = word.toLowerCase().trim();
+    target = target.toLowerCase().trim();
+
+    if (word === target) return true;
+
+    if (word + 's' === target || word === target + 's') return true;
+
+    if (word.endsWith('y') && target === word.slice(0, -1) + 'ies') return true;
+    if (target.endsWith('y') && word === target.slice(0, -1) + 'ies') return true;
+
+    if (word.endsWith('us') && target === word.slice(0, -2) + 'i') return true;
+    if (target.endsWith('us') && word === target.slice(0, -2) + 'i') return true;
+
+    return false;
   }
 
-  return false;
-}
+  function filterDatasetBySelectedWords() {
+    if (selectedWordsList.length === 0) {
+      resetDatasetFilter();
+      return;
+    }
 
-function filterDatasetBySelectedWords() {
-  if (selectedWordsList.length === 0) {
-    resetDatasetFilter(); 
-    return;
+    let matchingInstances: string[] = [];
+    for (const [captionWord, instances] of Object.entries(captionInstances)) {
+      if (matchWord(selectedWordsList[0], captionWord)) {
+        matchingInstances.push(...instances.map((instance) => instance.id));
+      }
+    }
+
+    for (let i = 1; i < selectedWordsList.length; i++) {
+      const word = selectedWordsList[i];
+      const wordInstances = Object.entries(captionInstances).filter(([captionWord]) =>
+        matchWord(word, captionWord),
+      );
+
+      const wordIds = wordInstances.flatMap(([_, instances]) =>
+        instances.map((instance) => instance.id),
+      );
+
+      matchingInstances = matchingInstances.filter((id) => wordIds.includes(id));
+
+      if (matchingInstances.length === 0) {
+        console.warn('No matching instances for the selected words.');
+        trainingSet.sift({ id: { $in: [] } });
+        return;
+      }
+    }
+
+    trainingSet.sift({ id: { $in: matchingInstances } });
   }
 
-  let matchingInstances: string[] = [];
-
-
-  for (const [caption, instances] of Object.entries(captionInstances)) {
-    const wordsInCaption = caption.toLowerCase().split(/\s+/);
-
-    const containsAllSelectedWords = selectedWordsList.every((selectedWord) =>
-      wordsInCaption.some((word) => matchWord(selectedWord, word))
-    );
-
-    if (containsAllSelectedWords) {
-      matchingInstances.push(...instances.map((instance) => instance.id));
+  $: {
+    if (selectedWordsList.length > 0) {
+      filterDatasetBySelectedWords();
+    } else {
+      resetDatasetFilter();
     }
   }
-
-  if (matchingInstances.length > 0) {
-    trainingSet.sift({ id: { $in: matchingInstances } });
-  } else {
-    console.warn('No matching instances for the selected words.');
-    trainingSet.sift({ id: { $in: [] } });
-  }
-}
-
-
-
-$: {
-  if (selectedWordsList.length > 0) {
-    filterDatasetBySelectedWords();
-  } else {
-    resetDatasetFilter();
-  }
-}
-
-
 </script>
 
 <div class="marcelle card">

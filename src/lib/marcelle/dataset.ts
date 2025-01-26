@@ -110,7 +110,7 @@ export async function generateCaption(image: ImageData): Promise<string> {
       caption.$value.set(generatedCaption);
       return generatedCaption; 
     } else {
-      const noCaption = 'No caption generated';
+      const noCaption = 'Try Again';
       caption.$value.set(noCaption);
       return noCaption;
     }
