@@ -7,33 +7,33 @@
   import { derived } from 'svelte/store';
   import { writable } from 'svelte/store';
 
-  let timeLeft = 300;
-  let timerInterval;
+  // let timeLeft = 300;
+  // let timerInterval;
 
-  function formatTime(seconds: number): string {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds
-      .toString()
-      .padStart(2, '0')}`;
-  }
+  // function formatTime(seconds: number): string {
+  //   const minutes = Math.floor(seconds / 60);
+  //   const remainingSeconds = seconds % 60;
+  //   return `${minutes.toString().padStart(2, '0')}:${remainingSeconds
+  //     .toString()
+  //     .padStart(2, '0')}`;
+  // }
 
-  let timeDisplay = writable(formatTime(timeLeft));
-
-
-  function startTimer() {
-    timerInterval = setInterval(() => {
-      timeLeft -= 1;
-      timeDisplay.set(formatTime(timeLeft));
-
-      if (timeLeft <= 0) {
-        clearInterval(timerInterval);
-      }
-    }, 1000);
-  }
+  // let timeDisplay = writable(formatTime(timeLeft));
 
 
-  startTimer();
+  // function startTimer() {
+  //   timerInterval = setInterval(() => {
+  //     timeLeft -= 1;
+  //     timeDisplay.set(formatTime(timeLeft));
+
+  //     if (timeLeft <= 0) {
+  //       clearInterval(timerInterval);
+  //     }
+  //   }, 1000);
+  // }
+
+
+  // startTimer();
 
   // let showDatasetWindow: boolean = false;
   let zoomLevel: number = 1;
@@ -211,11 +211,10 @@
   }
 
   .timer-display {
-    background-color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(255, 255, 255);
     padding: 5px 10px;
     border-radius: 5px;
     font-size: 0.9rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
 
   /* .btn {

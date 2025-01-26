@@ -3,7 +3,7 @@
   import { onMount } from 'svelte';
   import { notification } from '@marcellejs/core';
 
-  let preQTimeLeft = 10;
+  let preQTimeLeft = 30;
   let totalQuestions = 4;
   let answeredQuestions = 0;
   let progress = 0;
@@ -57,7 +57,6 @@
 
     console.log('Logged-in user ID:', userId);
 
-    // Redirect if the form is already submitted
     if (alreadySubmitted) {
       console.log('Questionnaire already submitted. Redirecting...');
       goto('/ASI-questionnaire');
@@ -66,7 +65,7 @@
 
     if (userId !== lastUserId) {
       console.log('New user detected. Resetting timer and states.');
-      preQTimeLeft = 10;
+      preQTimeLeft = 30;
       disableInputs = false;
 
       localStorage.removeItem('preQTimeLeft');
@@ -75,7 +74,7 @@
       localStorage.setItem('lastUserId', userId);
     } else {
       console.log('Returning user detected. Loading saved data.');
-      const savedTime = parseInt(localStorage.getItem('preQTimeLeft') || '10');
+      const savedTime = parseInt(localStorage.getItem('preQTimeLeft') || '30');
       const savedDisableState = localStorage.getItem('disableInputs') === 'true';
 
       preQTimeLeft = savedTime;
@@ -168,44 +167,44 @@
     const userId = localStorage.getItem('userId');
     if (userId) {
       localStorage.setItem(`preQuestionnaire-${userId}`, JSON.stringify(formData));
-      localStorage.setItem(`preQuestionnaireSubmitted-${userId}`, 'true'); // Mark as submitted
+      localStorage.setItem(`preQuestionnaireSubmitted-${userId}`, 'true'); 
       console.log('Saved pre-questionnaire data and marked as submitted:', formData);
     } else {
       console.error('Cannot save data: User ID is missing.');
     }
 
-    goto('/ASI-questionnaire'); // Redirect after successful submission
+    goto('/ASI-questionnaire'); 
   }
   
-  function resetTimer() {
-    clearInterval(timerInterval);
-    preQTimeLeft = 10;
+  // function resetTimer() {
+  //   clearInterval(timerInterval);
+  //   preQTimeLeft = 10;
 
-    const selects = document.querySelectorAll('select');
-    selects.forEach((select) => {
-      (select as HTMLSelectElement).style.border = '';
-    });
+  //   const selects = document.querySelectorAll('select');
+  //   selects.forEach((select) => {
+  //     (select as HTMLSelectElement).style.border = '';
+  //   });
 
-    timerInterval = setInterval(() => {
-      if (preQTimeLeft > 0) {
-        preQTimeLeft -= 1;
-        localStorage.setItem('preQTimeLeft', preQTimeLeft.toString());
-      } else {
-        clearInterval(timerInterval);
+  //   timerInterval = setInterval(() => {
+  //     if (preQTimeLeft > 0) {
+  //       preQTimeLeft -= 1;
+  //       localStorage.setItem('preQTimeLeft', preQTimeLeft.toString());
+  //     } else {
+  //       clearInterval(timerInterval);
 
-        const unansweredQuestions = highlightUnansweredQuestions();
+  //       const unansweredQuestions = highlightUnansweredQuestions();
 
-        if (unansweredQuestions.length > 0) {
-          notification({
-            title: 'Error',
-            message: 'Please answer all questions before time runs out.',
-            duration: 5000,
-            type: 'danger',
-          });
-        }
-      }
-    }, 1000);
-  }
+  //       if (unansweredQuestions.length > 0) {
+  //         notification({
+  //           title: 'Error',
+  //           message: 'Please answer all questions before time runs out.',
+  //           duration: 5000,
+  //           type: 'danger',
+  //         });
+  //       }
+  //     }
+  //   }, 1000);
+  // }
 </script>
 
 

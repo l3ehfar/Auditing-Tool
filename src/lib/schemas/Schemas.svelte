@@ -6,21 +6,69 @@
 
   let cards = writable([]);
   let nextCardId = 1;
+  let selectedCardId = writable(1);
 
   const CARDS_STORAGE_KEY = 'schemasCards';
   let userId = localStorage.getItem('userId');
   let lastUserId = localStorage.getItem('lastUserId');
 
-  let overallTimeLeft = 30;
+  let overallTimeLeft = 1800;
   const timerDisplay = writable(overallTimeLeft);
   let isSubmitDisabled = true;
   let showSubmitButton = false;
   let isTimerFinished = false;
 
+  const INACTIVITY_THRESHOLD = 180000; //3 minutes in milliseconds
+  const INACTIVITY_KEY = 'inactivityCounter';
+  let inactivityCount = parseInt(localStorage.getItem(INACTIVITY_KEY) || '0', 10);
+
+  let lastActivityTimestamp = Date.now();
+  let inactivityCheckInterval: ReturnType<typeof setInterval> | null = null;
+
+  function resetInactivityTimer() {
+    lastActivityTimestamp = Date.now(); 
+  }
+
+  function checkInactivity() {
+    const now = Date.now();
+    if (now - lastActivityTimestamp >= INACTIVITY_THRESHOLD) {
+      inactivityCount++;
+      localStorage.setItem(INACTIVITY_KEY, inactivityCount.toString());
+
+      notification({
+        title: 'You’ve been inactive!',
+        message: 'It seems you’ve been inactive for over 3 minutes.',
+        duration: 5000,
+        type: 'danger',
+      });
+
+      lastActivityTimestamp = now;
+    }
+  }
+
+  function startInactivityCheck() {
+    if (!inactivityCheckInterval) {
+      inactivityCheckInterval = setInterval(checkInactivity, 1000); // Check every second
+    }
+  }
+
   function saveCardsState() {
     if (userId) {
       const cardsData = get(cards);
       localStorage.setItem(`${CARDS_STORAGE_KEY}-${userId}`, JSON.stringify(cardsData));
+    }
+  }
+
+  function stopInactivityCheck() {
+    if (inactivityCheckInterval) {
+      clearInterval(inactivityCheckInterval);
+      inactivityCheckInterval = null;
+    }
+  }
+
+  function handleVisibilityChange() {
+    if (document.visibilityState === 'visible') {
+      lastActivityTimestamp = Date.now();
     }
   }
 
@@ -54,7 +102,7 @@
     const allCards = get(cards);
     isSubmitDisabled = allCards.some((card) =>
       Object.values(card.questionnaire)
-        .slice(0, 4) //only the first four questions
+        .slice(0, 3)
         .some((value) => !value.trim()),
     );
 
@@ -91,11 +139,29 @@
         timerDisplay.set(overallTimeLeft);
         localStorage.setItem('schemasTimer', JSON.stringify(overallTimeLeft));
 
-        if (overallTimeLeft === 15) {
+        if (overallTimeLeft === 600) {
           notification({
             title: 'Reminder',
-            message: 'You have 10 minutes to organize your findings.',
-            duration: 5000,
+            message: 'You have 10 minutes to organize and submit your hypotheses.',
+            duration: 8000,
+          });
+        } else if (overallTimeLeft === 1500) {
+          notification({
+            title: 'Reminder',
+            message: 'You must provide at least 2 hypotheses.',
+            duration: 10000,
+          });
+        } else if (overallTimeLeft === 1200) {
+          notification({
+            title: 'Reminder',
+            message: 'Have you tested your hypotheses?',
+            duration: 8000,
+          });
+        } else if (overallTimeLeft === 900) {
+          notification({
+            title: 'Reminder',
+            message: 'Have you enough examples to support your hypotheses?',
+            duration: 8000,
           });
         }
       } else {
@@ -105,7 +171,10 @@
         checkIfSubmitEnabled();
 
         cards.update((currentCards) =>
-          currentCards.map((card) => ({ ...card, showQuestionnaire: true })),
+          currentCards.map((card) => ({
+            ...card,
+            showQuestionnaire: true,
+          })),
         );
 
         if (isSubmitDisabled) {
@@ -120,7 +189,17 @@
       }
     }, 1000);
 
+    document.addEventListener('mousemove', resetInactivityTimer);
+    document.addEventListener('keydown', resetInactivityTimer);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    startInactivityCheck();
+
     return () => {
+      stopInactivityCheck();
+      document.removeEventListener('mousemove', resetInactivityTimer);
+      document.removeEventListener('keydown', resetInactivityTimer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearInterval(timer);
       window.removeEventListener('beforeunload', saveCardsState);
     };
@@ -132,22 +211,25 @@
 
   function addCard() {
     if (isTimerFinished) return;
-    cards.update((currentCards) => [
-      ...currentCards,
-      {
-        id: nextCardId++,
-        text: '',
-        items: [],
-        showQuestionnaire: false,
-        questionnaire: {
-          question1: '',
-          question2: '',
-          question3: '',
-          question4: '',
+    cards.update((currentCards) => {
+      const newCards = [
+        ...currentCards,
+        {
+          id: nextCardId++,
+          text: '',
+          items: [],
+          showQuestionnaire: false,
+          questionnaire: {
+            question1: '',
+            question2: '',
+            question3: '',
+          },
         },
-      },
-    ]);
-    saveCardsState();
+      ];
+      return newCards;
+    });
+
+    setTimeout(() => saveCardsState(), 0);
   }
 
   function removeCard(cardId) {
@@ -184,6 +266,7 @@
           return c;
         }),
       );
+      saveCardsState();
     } catch (error) {
       console.error('Failed to parse drag data:', error);
     }
@@ -206,7 +289,7 @@
   function handleDragStart(event, cardId, item) {
     draggedItem = { cardId, item };
     event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', JSON.stringify(item)); // Set drag data
+    event.dataTransfer.setData('text/plain', JSON.stringify(item));
   }
 
   function handleDropOnItem(event, cardId, targetItemId) {
@@ -231,6 +314,10 @@
     }
 
     draggedItem = null;
+  }
+
+  function selectCard(id: number) {
+    selectedCardId.set(id);
   }
 
   function submitFinalResults() {
@@ -266,293 +353,300 @@
   }
 </script>
 
-<div class="marcelle-card">
-  <div class="container">
-    <div class="button-row">
-      <button class="btn btn-xs btn-primary" on:click={addCard} disabled={isTimerFinished}>New Hypothesis</button>
+{#if isTimerFinished}
+  <div class="flex h-screen">
+    <div class="menu-container w-1/4 p-4 h-screen top-0 overflow-y-auto">
+      <h3 class="font-bold text-gray-600 mb-4">Please fill out all the questionnaires</h3>
+      <ul class="menu bg-base-200 rounded-box">
+        {#each $cards as card (card.id)}
+          <li style="margin-bottom: 4px;">
+            <a
+              href="#"
+              on:click={() => selectCard(card.id)}
+              class={$selectedCardId === card.id
+                ? 'bg-base-300'
+                : Object.values(card.questionnaire).every((q) => q.trim())
+                  ? 'bg-accent'
+                  : 'bg-base-200'}
+            >
+              Hypothesis {card.id}
+            </a>
+          </li>
+        {/each}
+      </ul>
+      {#if showSubmitButton}
+        {#if isSubmitDisabled}
+          <div
+            class="tooltip tooltip-bottom tooltip-accent"
+            data-tip="Please answer all mandatory questions"
+          >
+            <button class="btn btn-xs btn-accent mt-4" on:click={submitFinalResults} disabled>
+              Submit Final Results
+            </button>
+          </div>
+        {:else}
+          <button class="btn btn-xs btn-accent mt-4" on:click={submitFinalResults}>
+            Submit Final Results
+          </button>
+        {/if}
+      {/if}
     </div>
 
-    {#each $cards as card (card.id)}
-      <div class="card shadow-lg bg-base-100 p-4">
-        <div class="card-body">
-          <button
-            class="btn btn-xs btn-circle absolute top-2 right-2"
-            on:click={() => removeCard(card.id)}
-            disabled={isTimerFinished}
-          >
-            x
-          </button>
-
-          <textarea
-            bind:value={card.text}
-            class="textarea textarea-xs textarea-accent textarea-bordered w-full"
-            placeholder="Add your hypothesis here"
-            disabled={isTimerFinished}
-          ></textarea>
-
-          {#if card.items.length === 0}
-            <div
-              class="tooltip tooltip-open tooltip-accent"
-              data-tip="drag and drop evidence"
-            ></div>
-          {/if}
-
-          <div
-            class="grid grid-cols-5 gap-2 p-4 border border-dashed border-gray-300 rounded-lg min-h-[100px]"
-            class:disabled={isTimerFinished}
-            on:drop={(event) => isTimerFinished || onDrop(event, card)}
-            on:dragover={(event) => isTimerFinished || allowDrop(event)}
-          >
-            {#each card.items as item (item.id)}
-              <div
-                class="dropped-item p-1 bg-gray-100 border border-gray-300 rounded-md text-center relative"
-                draggable={!isTimerFinished}
-                on:dragstart={(event) => isTimerFinished || handleDragStart(event, card.id, item)}
-                on:drop={(event) => handleDropOnItem(event, card.id, item.id)}
-                on:dragover={allowDrop}
+    <div class="main-container">
+      {#each $cards as card (card.id)}
+        {#if card.id === $selectedCardId}
+          <div class="card shadow-lg bg-base-100 p-4">
+            <div class="card-body">
+              <button
+                class="btn btn-xs btn-circle absolute top-2 right-2"
+                on:click={() => removeCard(card.id)}
+                disabled={isTimerFinished}
               >
-                <button
-                  class="items-btn btn btn-xs btn-circle absolute top-1 right-1"
-                  on:click={() => removeItem(card.id, item.id)}
-                  disabled={isTimerFinished}
-                >
-                  x
-                </button>
-                {#if item.type === 'image-caption'}
-                  <img src={item.src} alt="Dropped Image" class="w-full h-auto mb-2 rounded" />
-                  <h3 class="text-xs text-gray-600">{item.caption}</h3>
-                {/if}
-              </div>
-            {/each}
-          </div>
-          {#if card.showQuestionnaire}
-            <div class="questionnaire mt-4">
-              <h3 class="font-bold mb-4">Please fill out the questionnaire:</h3>
+                x
+              </button>
+              <h3 class="font-bold text-gray-600">Hypothesis {card.id}</h3>
+              <textarea
+                bind:value={card.text}
+                class="textarea textarea-xs textarea-accent textarea-bordered w-full"
+                placeholder="Add your hypothesis here"
+                disabled={isTimerFinished}
+              ></textarea>
 
-              <div class="form-control mb-4">
-                <label class="label font-medium text-sm">
-                  How confident are you about this hypothesis? <span>*</span>
-                </label>
-                <div class="likert-scale flex justify-between">
-                  <label>
-                    <input
-                      type="radio"
-                      name="confidence-{card.id}"
-                      value="1"
-                      bind:group={card.questionnaire.question1}
-                    />
-                    Very Uncertain
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="confidence-{card.id}"
-                      value="2"
-                      bind:group={card.questionnaire.question1}
-                    />
-                    Uncertain
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="confidence-{card.id}"
-                      value="3"
-                      bind:group={card.questionnaire.question1}
-                    />
-                    Neutral
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="confidence-{card.id}"
-                      value="4"
-                      bind:group={card.questionnaire.question1}
-                    />
-                    Confident
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="confidence-{card.id}"
-                      value="5"
-                      bind:group={card.questionnaire.question1}
-                    />
-                    Very Confident
-                  </label>
+              {#if card.items.length === 0}
+                <div
+                  class="tooltip tooltip-open tooltip-accent"
+                  data-tip="drag and drop evidence"
+                ></div>
+              {/if}
+
+              <div
+                class="grid grid-cols-5 gap-2 p-4 border border-dashed border-gray-300 rounded-lg min-h-[100px]"
+                class:disabled={isTimerFinished}
+                on:drop={(event) => isTimerFinished || onDrop(event, card)}
+                on:dragover={(event) => isTimerFinished || allowDrop(event)}
+              >
+                {#each card.items as item (item.id)}
+                  <div
+                    class="dropped-item p-1 bg-gray-100 border border-gray-300 rounded-md text-center relative"
+                    draggable={!isTimerFinished}
+                    on:dragstart={(event) =>
+                      isTimerFinished || handleDragStart(event, card.id, item)}
+                    on:drop={(event) => handleDropOnItem(event, card.id, item.id)}
+                    on:dragover={allowDrop}
+                  >
+                    <button
+                      class="items-btn btn btn-xs btn-circle absolute top-1 right-1"
+                      on:click={() => removeItem(card.id, item.id)}
+                      disabled={isTimerFinished}
+                    >
+                      x
+                    </button>
+                    {#if item.type === 'image-caption'}
+                      <img src={item.src} alt="Dropped Image" class="w-full h-auto mb-2 rounded" />
+                      <h3 class="text-xs text-gray-600">{item.caption}</h3>
+                    {/if}
+                  </div>
+                {/each}
+              </div>
+              {#if card.showQuestionnaire}
+                <div class="questionnaire mt-4">
+                  <!-- <h3 class="font-bold mb-4">Please fill out the questionnaire:</h3> -->
+
+                  <div class="form-control mb-4">
+                    <label class="label font-medium text-sm">
+                      How accurately did you describe the bias? <span>*</span>
+                    </label>
+                    <div class="likert-scale flex justify-between">
+                      <label>
+                        <input
+                          type="radio"
+                          name="confidence-{card.id}"
+                          value="1"
+                          bind:group={card.questionnaire.question1}
+                        />
+                        Very Uncertain
+                      </label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="confidence-{card.id}"
+                          value="2"
+                          bind:group={card.questionnaire.question1}
+                        />
+                        Uncertain
+                      </label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="confidence-{card.id}"
+                          value="3"
+                          bind:group={card.questionnaire.question1}
+                        />
+                        Neutral
+                      </label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="confidence-{card.id}"
+                          value="4"
+                          bind:group={card.questionnaire.question1}
+                        />
+                        Confident
+                      </label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="confidence-{card.id}"
+                          value="5"
+                          bind:group={card.questionnaire.question1}
+                        />
+                        Very Confident
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="form-control mb-4">
+                    <label class="label font-medium text-sm">
+                      Did you put all the examples that support the bias you described? <span
+                        >*</span
+                      >
+                    </label>
+                    <div class="radio-options flex space-x-4">
+                      <label>
+                        <input
+                          type="radio"
+                          name="evidence-{card.id}"
+                          value="yes"
+                          bind:group={card.questionnaire.question2}
+                        />
+                        Yes
+                      </label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="evidence-{card.id}"
+                          value="no"
+                          bind:group={card.questionnaire.question2}
+                        />
+                        No
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="form-control mb-4">
+                    <label class="label font-medium text-sm">
+                      Did you find any examples that go against your hypothesis? <span>*</span>
+                    </label>
+                    <div class="radio-options flex space-x-4">
+                      <label>
+                        <input
+                          type="radio"
+                          name="counterexamples-{card.id}"
+                          value="yes"
+                          bind:group={card.questionnaire.question3}
+                        />
+                        Yes
+                      </label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="counterexamples-{card.id}"
+                          value="no"
+                          bind:group={card.questionnaire.question3}
+                        />
+                        No
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="form-control">
+                    <label class="label font-medium text-sm">
+                      Do you have additional comments to help us understand your hypothesis?
+                    </label>
+                    <textarea
+                      name="comments-{card.id}"
+                      placeholder="Add your comments here..."
+                      bind:value={card.questionnaire.comments}
+                      class="textarea textarea-bordered"
+                    ></textarea>
+                  </div>
                 </div>
-              </div>
-
-              <div class="form-control mb-4">
-                <label class="label font-medium text-sm">
-                  Did you find any examples that go against your hypothesis? <span>*</span>
-                </label>
-                <div class="radio-options flex space-x-4">
-                  <label>
-                    <input
-                      type="radio"
-                      name="counterexamples-{card.id}"
-                      value="yes"
-                      bind:group={card.questionnaire.question2}
-                    />
-                    Yes
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="counterexamples-{card.id}"
-                      value="no"
-                      bind:group={card.questionnaire.question2}
-                    />
-                    No
-                  </label>
-                </div>
-              </div>
-
-              <div class="form-control mb-4">
-                <label class="label font-medium text-sm">
-                  How often does the bias described in your hypothesis occur? <span>*</span>
-                </label>
-                <div class="likert-scale flex justify-between">
-                  <label>
-                    <input
-                      type="radio"
-                      name="frequency-{card.id}"
-                      value="1"
-                      bind:group={card.questionnaire.question3}
-                    />
-                    Never
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="frequency-{card.id}"
-                      value="2"
-                      bind:group={card.questionnaire.question3}
-                    />
-                    Rarely
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="frequency-{card.id}"
-                      value="3"
-                      bind:group={card.questionnaire.question3}
-                    />
-                    Sometimes
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="frequency-{card.id}"
-                      value="4"
-                      bind:group={card.questionnaire.question3}
-                    />
-                    Often
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="frequency-{card.id}"
-                      value="5"
-                      bind:group={card.questionnaire.question3}
-                    />
-                    Always
-                  </label>
-                </div>
-              </div>
-
-              <div class="form-control mb-4">
-                <label class="label font-medium text-sm">
-                  How harmful is the bias described in your hypothesis? <span>*</span>
-                </label>
-                <div class="likert-scale flex justify-between">
-                  <label>
-                    <input
-                      type="radio"
-                      name="problematic-{card.id}"
-                      value="1"
-                      bind:group={card.questionnaire.question4}
-                    />
-                    Not harmful
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="problematic-{card.id}"
-                      value="2"
-                      bind:group={card.questionnaire.question4}
-                    />
-                    Slightly harmful
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="problematic-{card.id}"
-                      value="3"
-                      bind:group={card.questionnaire.question4}
-                    />
-                    Somewhat harmful
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="problematic-{card.id}"
-                      value="4"
-                      bind:group={card.questionnaire.question4}
-                    />
-                    Harmful
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="problematic-{card.id}"
-                      value="5"
-                      bind:group={card.questionnaire.question4}
-                    />
-                    Very harmful
-                  </label>
-                </div>
-              </div>
-
-              <div class="form-control">
-                <label class="label font-medium text-sm">
-                  Do you have additional comments about this hypothesis?
-                </label>
-                <textarea
-                  name="comments-{card.id}"
-                  placeholder="Add your comments here..."
-                  bind:value={card.questionnaire.comments}
-                  class="textarea textarea-bordered"
-                ></textarea>
-              </div>
+              {/if}
             </div>
-          {/if}
-        </div>
-      </div>
-    {/each}
-    {#if showSubmitButton}
-    {#if isSubmitDisabled}
-      <div class="tooltip tooltip-right tooltip-accent" data-tip="Please answer all mandatory questions">
-        <button
-          class="btn btn-xs btn-accent mt-4"
-          on:click={submitFinalResults}
-          disabled
-        >
-          Submit Final Results
-        </button>
-      </div>
-    {:else}
-      <button
-        class="btn btn-xs btn-accent mt-4"
-        on:click={submitFinalResults}
-      >
-        Submit Final Results
-      </button>
-    {/if}
-  {/if}
-  
+          </div>
+        {/if}
+      {/each}
+    </div>
   </div>
-</div>
+{:else}
+  <div class="marcelle-card">
+    <div class="container">
+      <div class="button-row">
+        <button class="btn btn-xs btn-primary" on:click={addCard} disabled={isTimerFinished}
+          >New Hypothesis</button
+        >
+      </div>
+
+      {#each $cards as card (card.id)}
+        <div class="card shadow-lg bg-base-100 p-4">
+          <div class="card-body">
+            <button
+              class="btn btn-xs btn-circle absolute top-2 right-2"
+              on:click={() => removeCard(card.id)}
+              disabled={isTimerFinished}
+            >
+              x
+            </button>
+
+            <textarea
+              bind:value={card.text}
+              class="textarea textarea-xs textarea-accent textarea-bordered w-full"
+              placeholder="Add your hypothesis here"
+              on:input={() => saveCardsState()}
+              disabled={isTimerFinished}
+            ></textarea>
+
+            {#if card.items.length === 0}
+              <div
+                class="tooltip tooltip-open tooltip-accent"
+                data-tip="drag and drop evidence"
+              ></div>
+            {/if}
+
+            <div
+              class="grid grid-cols-5 gap-2 p-4 border border-dashed border-gray-300 rounded-lg min-h-[100px]"
+              class:disabled={isTimerFinished}
+              on:drop={(event) => isTimerFinished || onDrop(event, card)}
+              on:dragover={(event) => isTimerFinished || allowDrop(event)}
+            >
+              {#each card.items as item (item.id)}
+                <div
+                  class="dropped-item p-1 bg-gray-100 border border-gray-300 rounded-md text-center relative"
+                  draggable={!isTimerFinished}
+                  on:dragstart={(event) => isTimerFinished || handleDragStart(event, card.id, item)}
+                  on:drop={(event) => handleDropOnItem(event, card.id, item.id)}
+                  on:dragover={allowDrop}
+                >
+                  <button
+                    class="items-btn btn btn-xs btn-circle absolute top-1 right-1"
+                    on:click={() => removeItem(card.id, item.id)}
+                    disabled={isTimerFinished}
+                  >
+                    x
+                  </button>
+                  {#if item.type === 'image-caption'}
+                    <img src={item.src} alt="Dropped Image" class="w-full h-auto mb-2 rounded" />
+                    <h3 class="text-xs text-gray-600">{item.caption}</h3>
+                  {/if}
+                </div>
+              {/each}
+            </div>
+          </div>
+        </div>
+      {/each}
+    </div>
+  </div>
+{/if}
 
 <style>
   .btn {
@@ -609,7 +703,7 @@
   }
 
   .dropped-item {
-    padding: 7px;
+    padding: 4px !important;
     background-color: #fff;
     border: 1px solid #e6e6e6;
     border-radius: 8px;
@@ -619,7 +713,7 @@
   }
 
   .dropped-item h3 {
-    font-size: 0.6rem;
+    font-size: 0.5rem;
     text-align: center;
   }
 
@@ -667,6 +761,24 @@
   .likert-scale input {
     margin: 0 auto;
     display: block;
+  }
+
+  .menu-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    /* width: 25%; */
+    /* height: 100%; */
+    margin-top: 50px;
+    overflow-y: auto;
+    z-index: 1000;
+  }
+
+  .main-container {
+    margin-left: 25%;
+    width: 100%;
+    min-width: 550px;
+    max-width: 550px;
   }
 
   .radio-options label {
