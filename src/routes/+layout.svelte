@@ -124,6 +124,17 @@
     <div class="auth-layout">
       <slot />
     </div>
+  {:else if currentRoute === '/admin' }
+  <div class="main-section">
+    <div class="left-panel">
+      <div class="slot-section">
+        <slot />
+      </div>
+      <div class="dataset-section">
+        <Dataset />
+      </div>
+    </div>
+  </div>
   {:else if currentRoute === '/conditionThree'}
   <div class="main-section">
     <div class="left-panel">
