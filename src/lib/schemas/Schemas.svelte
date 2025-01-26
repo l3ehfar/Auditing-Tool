@@ -408,7 +408,7 @@
               <textarea
                 bind:value={card.text}
                 class="textarea textarea-xs textarea-accent textarea-bordered w-full"
-                placeholder="Add your hypothesis here"
+                placeholder="Describe the bias you observed"
                 disabled={isTimerFinished}
               ></textarea>
 
