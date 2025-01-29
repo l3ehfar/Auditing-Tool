@@ -1,18 +1,6 @@
 <script lang="ts">
-  import {
-    caption,
-    $imageStream as imageStream,
-    trainingSet,
-    dynamicClassLabel,
-    captionInstances,
-  } from '$lib/marcelle';
-  import { onMount, onDestroy, tick } from 'svelte';
-  import * as fabric from 'fabric';
-  import { marcelle } from '$lib/utils';
-
-  let canvas: fabric.Canvas | null = null;
-  let imageObject: fabric.Image | null = null;
-  let dragOverlay: HTMLDivElement | null = null;
+  import { caption, trainingSet, dynamicClassLabel, captionInstances } from '$lib/marcelle';
+  import { onMount } from 'svelte';
 
   let selectedWordsList: string[] = [];
 
@@ -149,27 +137,6 @@
   onMount(async () => {
     await fetchAndProcessCaptions();
 
-    const canvasOverlay = document.querySelector('#fabric-canvas') as HTMLCanvasElement;
-    const width = 200;
-    const height = 200;
-
-    canvas = new fabric.Canvas(canvasOverlay, {
-      isDrawingMode: false,
-      width: width,
-      height: height,
-    });
-
-    dragOverlay = document.querySelector('#drag-overlay');
-    if (dragOverlay) {
-      dragOverlay.addEventListener('dragstart', onDragStart);
-    }
-
-    imageStream
-      .filter((img) => !!img)
-      .subscribe((img) => {
-        loadImageToCanvas(img);
-      });
-
     caption.$value.subscribe((captionText) => {
       if (captionText) {
         updateAggregatedPersonFrequency(captionText);
@@ -188,66 +155,6 @@
       Object.keys(captionInstances).forEach((key) => (captionInstances[key] = {}));
 
       fetchAndProcessCaptions();
-    }
-  }
-
-  onDestroy(() => {
-    if (dragOverlay) {
-      dragOverlay.removeEventListener('dragstart', onDragStart);
-    }
-  });
-
-  function loadImageToCanvas(img: ImageData) {
-    if (canvas) {
-      canvas.clear();
-
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = img.width;
-      tempCanvas.height = img.height;
-
-      const ctx = tempCanvas.getContext('2d');
-      if (ctx) {
-        ctx.putImageData(img, 0, 0);
-
-        const imgElement = new Image();
-        imgElement.src = tempCanvas.toDataURL();
-
-        imgElement.onload = function () {
-          if (canvas) {
-            if (imageObject) {
-              canvas.remove(imageObject);
-            }
-
-            imageObject = new fabric.Image(imgElement, {
-              left: 0,
-              top: 0,
-              selectable: false,
-              evented: false,
-            });
-
-            canvas.add(imageObject);
-            canvas.renderAll();
-          }
-        };
-      }
-    }
-  }
-
-  function onDragStart(event: DragEvent) {
-    const canvasElement = document.querySelector('#fabric-canvas') as HTMLCanvasElement;
-    const currentCaption = caption.$value.get();
-
-    if (canvasElement) {
-      const canvasUrl = canvasElement.toDataURL('image/png');
-      const data = JSON.stringify({
-        type: 'image-caption',
-        src: canvasUrl,
-        caption: currentCaption || 'Try Again',
-      });
-
-      event.dataTransfer?.setData('text/plain', data);
-    } else {
-      console.error('Canvas element not found');
     }
   }
 
@@ -382,18 +289,6 @@
       </div>
       <!-- </div> -->
     </div>
-
-    <div
-      class="group-components-container instax-style"
-      draggable="true"
-      on:dragstart={onDragStart}
-    >
-      <div class="canvas-container">
-        <canvas id="fabric-canvas" width="100" height="200"></canvas>
-        <div id="drag-overlay" class="drag-overlay"></div>
-      </div>
-      <div class="marcelle-component caption" use:marcelle={caption}></div>
-    </div>
   </div>
 </div>
 
@@ -405,10 +300,6 @@
     box-sizing: border-box;
     width: 100%;
     align-items: center;
-  }
-
-  .dropdown-content {
-    width: 90%;
   }
 
   .badge-container {
@@ -443,16 +334,6 @@
     color: #004d40;
   }
 
-  .dropdown-content li a {
-    padding: 2px 8px;
-    font-size: 0.9rem;
-    line-height: 1.6rem;
-  }
-
-  .dropdown-content li {
-    margin: 0;
-  }
-
   .add-word {
     display: flex;
     flex-direction: row;
@@ -472,73 +353,11 @@
     text-align: left;
   }
 
-  .marcelle-component.caption {
-    font-size: 0.8rem;
-    color: var(--heading-color);
-    padding: 5px;
-    text-align: center;
-    border: none;
-  }
-
   .conf-row {
     display: flex;
     gap: 10px;
     height: 100%;
     align-items: center;
-  }
-
-  .marcelle-component {
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .canvas-container {
-    position: relative;
-    width: 200px;
-    height: 200px;
-  }
-
-  canvas {
-    width: 100%;
-    height: 100%;
-    pointer-events: auto;
-    z-index: 10;
-    background-color: transparent;
-  }
-
-  .drag-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: transparent;
-    z-index: 20;
-    cursor: grab;
-  }
-
-  .group-components-container {
-    display: flex;
-    flex-direction: column;
-    /* gap: 5px; */
-    align-items: center;
-  }
-
-  .instax-style {
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 10px;
-    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
-    width: 220px;
-    height: 270px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
   }
 
   .word-selection {
@@ -550,10 +369,6 @@
     margin-right: 10px;
   }
 
-  .dropdown {
-    z-index: 100;
-  }
-
   input {
     font-size: 0.7rem;
     width: 85px;
@@ -561,23 +376,4 @@
     /* margin-right: 5px; */
     border-color: #ddd;
   }
-
-  .tooltip::before {
-    max-width: 30rem;
-    white-space: normal;
-    border-radius: 0.25rem;
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-    padding-top: 0.15rem;
-    padding-bottom: 0.15rem;
-    font-size: 0.7rem;
-    line-height: 1rem;
-    background-color: var(--tooltip-color);
-    color: var(--tooltip-text-color);
-    width: max-content;
-  }
-
-  /* .tooltip {
-    margin-top: 10px;
-  } */
 </style>

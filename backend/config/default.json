@@ -20,7 +20,7 @@
     "max": 1000
   },
   "authentication": {
-    "enabled": false,
+    "enabled": true,
     "entity": "user",
     "service": "users",
     "allowSignup": true,

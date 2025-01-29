@@ -1,7 +1,5 @@
-import '@marcellejs/core/dist/marcelle.css';
 import {
   dataset,
-  dataStore,
   textInput,
   imageUpload,
   type Instance,
@@ -14,20 +12,19 @@ import {
 import { datasetExplorer } from './components';
 import { huggingfaceModel } from './components';
 import { writable } from 'svelte/store';
-
-export const store = dataStore('http://localhost:3030');
+import { store } from './store';
 
 export let dynamicClassLabel = writable('all');
 
 // export let aggregatedPersonFrequency: { [key: string]: number } = { male: 0, female: 0, classLabel: 0 };
 // export let coOccurrences: { [key: string]: { [word: string]: number } } = { male: {}, female: {}, classLabel: {} };
 // export let captionInstances: { [key: string]: { [word: string]: any[] } } = { male: {}, female: {}, classLabel: {} };
-export let captionInstances: { [word: string]: any[] } = {}; 
+export let captionInstances: { [word: string]: any[] } = {};
 
 export const genderedWords = {
   male: ['man', 'he', 'him', 'his', 'boy', 'male', 'men'],
   female: ['woman', 'she', 'her', 'hers', 'girl', 'female', 'women'],
-  classLabel: [], 
+  classLabel: [],
 };
 
 export interface ImageInstance extends Instance {
@@ -40,7 +37,7 @@ export interface ImageInstance extends Instance {
 
 const HFmodel = huggingfaceModel({
   task: 'image-to-text',
-  apiToken: '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', 
+  apiToken: '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',
   inference: 'api',
 });
 
@@ -50,15 +47,22 @@ export const label = textInput();
 
 // List of words to remove from captions
 const unwantedWords = [
-  'araffe', 'arafed', 'arafian', 'arafe', 
-  'arraffe', 'arrafe', 'arrafed', 'araffed', 'arraffed'
+  'araffe',
+  'arafed',
+  'arafian',
+  'arafe',
+  'arraffe',
+  'arrafe',
+  'arrafed',
+  'araffed',
+  'arraffed',
 ];
 
 // Function to clean captions and replace unwanted words with "a "
 function cleanCaption(caption: string): string {
   const regex = new RegExp(`\\b(${unwantedWords.join('|')})\\b`, 'gi');
   const cleanedCaption = caption.replace(regex, 'a ').replace(/\s+/g, ' ').trim();
-  
+
   return cleanedCaption;
 }
 
@@ -83,21 +87,10 @@ async function cropAndResizeImage(image: ImageData): Promise<ImageData> {
   canvas.width = 200;
   canvas.height = 200;
 
-  ctx.drawImage(
-    imageBitmap,
-    cropX,
-    cropY,
-    squareSize,
-    squareSize, 
-    0,
-    0,
-    200,
-    200 
-  );
+  ctx.drawImage(imageBitmap, cropX, cropY, squareSize, squareSize, 0, 0, 200, 200);
 
   return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
-
 
 export async function generateCaption(image: ImageData): Promise<string> {
   try {
@@ -108,7 +101,7 @@ export async function generateCaption(image: ImageData): Promise<string> {
       generatedCaption = cleanCaption(generatedCaption);
 
       caption.$value.set(generatedCaption);
-      return generatedCaption; 
+      return generatedCaption;
     } else {
       const noCaption = 'Try Again';
       caption.$value.set(noCaption);
@@ -148,7 +141,7 @@ export async function handleCapture() {
       instanceCaption = cleanCaption(instanceCaption);
 
       const instance: ImageInstance = {
-        x: processedImage, 
+        x: processedImage,
         y: labelValue,
         thumbnail: thumbnailData,
         caption: instanceCaption,
@@ -182,7 +175,6 @@ export async function handleCapture() {
   }
 }
 
-
 input.$images.subscribe(async (image) => {
   if (image) {
     try {
@@ -214,23 +206,22 @@ $currentClasses.subscribe((c) => selectClass.$options.set(['all', ...c]));
 
 selectClass.title = 'Choose a Class:';
 selectClass.$value.subscribe((label: string) => {
-  const newQuery = label === 'all' ? {} : { y: label };  
+  const newQuery = label === 'all' ? {} : { y: label };
 
   if (JSON.stringify(newQuery) === JSON.stringify(trainingSet.query)) return;
 
   if (label === 'all') {
-      dynamicClassLabel.set('all');  
+    dynamicClassLabel.set('all');
   } else {
-      dynamicClassLabel.set(label);  
+    dynamicClassLabel.set(label);
   }
 
-  // aggregatedPersonFrequency.classLabel = 0;  
-  // coOccurrences.classLabel = {};  
-  // captionInstances.classLabel = {};  
+  // aggregatedPersonFrequency.classLabel = 0;
+  // coOccurrences.classLabel = {};
+  // captionInstances.classLabel = {};
 
-  trainingSet.sift(newQuery);  
+  trainingSet.sift(newQuery);
 });
-
 
 let selectedImageInstance: ImageInstance | null = null;
 
@@ -249,7 +240,7 @@ const $selectedImage = datasetExplorerComponent.$selected
     return instance;
   });
 
-export const $imageStream = new Stream<ImageData>();
+export const $imageStream = new Stream<ImageData>(Stream.never());
 
 $selectedImage.subscribe((instance) => {
   if (instance) {
@@ -292,6 +283,5 @@ input.$images.subscribe(async (image) => {
     }
   }
 });
-
 
 export const ImageDisplay = imageDisplay($imageStream);

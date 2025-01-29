@@ -7,6 +7,7 @@
     handleCapture(); // Call the capture function
   }
   import { store } from '$lib/marcelle';
+  import Dataset from '$lib/dataset/Dataset.svelte';
 
   async function signOut() {
     console.log('Sign out initiated');
@@ -20,14 +21,25 @@
   }
 </script>
 
-<div class="marcelle card">
-  <div class="conf-row">
-    <div use:marcelle={input}></div>
-    <div use:marcelle={label}></div>
-    <button class="btn" on:click={captureImage}>add to dataset</button>
-    <div use:marcelle={ImageDisplay}></div>
+<div class="flex flex-col h-screen">
+  <div class="main-section">
+    <div class="left-panel">
+      <div class="slot-section">
+        <div class="marcelle card">
+          <div class="conf-row">
+            <div use:marcelle={input}></div>
+            <div use:marcelle={label}></div>
+            <button class="btn" on:click={captureImage}>add to dataset</button>
+            <div use:marcelle={ImageDisplay}></div>
+          </div>
+          <button on:click={signOut}>Sign Out</button>
+        </div>
+      </div>
+      <div class="dataset-section">
+        <Dataset />
+      </div>
+    </div>
   </div>
-  <button on:click={signOut}>Sign Out</button>
 </div>
 
 <style>
@@ -45,92 +57,30 @@
     font-weight: normal;
   }
 
-  .marcelle-component.caption {
-    font-size: 0.8rem;
-    color: var(--heading-color);
-    padding: 5px;
-    text-align: center;
-    border: none;
-  }
-
-  .conf-row {
+  .main-section {
     display: flex;
-    gap: 10px;
+    flex: 1;
     height: 100%;
-    align-items: center;
+    width: 100%;
   }
 
-  .marcelle-component {
-    border: 1px solid #ddd;
-    border-radius: 5px;
+  .left-panel {
+    flex: 1;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    height: 100%;
+    padding: 2px;
+    gap: 2px;
+    background-color: oklch(var(--b2));
+  }
+
+  .slot-section,
+  .dataset-section {
+    flex: 1;
+    display: flex;
     justify-content: center;
-  }
-
-  .canvas-container {
-    position: relative;
-    width: 200px;
-    height: 200px;
-  }
-
-  canvas {
-    width: 100%;
-    height: 100%;
-    pointer-events: auto;
-    z-index: 10;
-    background-color: transparent;
-  }
-
-  .drag-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: transparent;
-    z-index: 20;
-    cursor: grab;
-  }
-
-  .group-components-container {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
     align-items: center;
-  }
-
-  .instax-style {
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 10px;
-    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
-    width: 220px;
-    height: 270px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-  }
-
-  canvas {
-    border-radius: 4px;
-    margin-bottom: 10px;
-  }
-
-  .marcelle-component.caption {
-    min-height: 40px;
-    max-height: 60px;
-    text-align: center;
-    padding: 5px;
-  }
-
-  .group-components-container-small {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    max-width: 100px;
-    align-items: center;
+    padding: 2px;
+    overflow: hidden;
   }
 </style>

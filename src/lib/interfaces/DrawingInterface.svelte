@@ -43,7 +43,6 @@
       }
     }
   }
-  
 
   function updateBrushSettings() {
     if (canvas && canvas.freeDrawingBrush) {
@@ -68,10 +67,10 @@
 
   function onDragStart(event: DragEvent) {
     const canvasElement = document.querySelector('#fabric-canvas') as HTMLCanvasElement;
-    const currentCaption = caption.$value.get(); 
+    const currentCaption = caption.$value.get();
 
     if (canvasElement) {
-      const canvasUrl = canvasElement.toDataURL('image/png'); 
+      const canvasUrl = canvasElement.toDataURL('image/png');
       const data = JSON.stringify({
         type: 'image-caption',
         src: canvasUrl,
@@ -252,11 +251,14 @@
       <button class="btn btn-sm w-full" on:click={undoLastAction}>
         <FontAwesomeIcon icon={faRotateLeft} />
       </button>
-      <div class="tooltip tooltip-bottom tooltip-accent" data-tip="the model may take a few seconds to generate captions">
-      <button class="btn btn-sm btn-secondary w-full" on:click={generateCaptionForCombinedImage}>
-        Generate Caption
-      </button>
-    </div>
+      <div
+        class="tooltip tooltip-bottom tooltip-accent"
+        data-tip="the model may take a few seconds to generate captions"
+      >
+        <button class="btn btn-sm btn-secondary w-full" on:click={generateCaptionForCombinedImage}>
+          Generate Caption
+        </button>
+      </div>
     </div>
   </div>
 </div>
