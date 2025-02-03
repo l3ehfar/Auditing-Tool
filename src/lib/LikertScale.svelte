@@ -13,7 +13,7 @@
 </script>
 
 <div class="form-control">
-  <label class="label font-medium text-sm text-left" for={name}>{question}</label>
+  <label class="label font-medium text-left" for={name}>{question}</label>
   <div class="likert-scale flex justify-between">
     <span>Disagree strongly</span>
     {#each [1, 2, 3, 4, 5] as v}

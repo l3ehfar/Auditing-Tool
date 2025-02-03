@@ -1,25 +1,14 @@
+import { writable } from 'svelte/store';
 import { store } from './store';
-
-export const PAGES = [
-  'pre-questionnaire',
-  'asi-questionnaire',
-  'training',
-  'main',
-  'post-questionnaire',
-] as const;
-export const STEPS = PAGES.length;
-
-export type Page = (typeof PAGES)[number];
-export interface Status {
-  step: number;
-  steps: number;
-  page: Page;
-}
+import { PAGES, STEPS, type Page, type Status } from './progress';
 
 const progress = store.service<Status>('progress');
+export const status = writable({ step: -1, steps: 1, page: 'loading' });
 
 export function setProgress(page: Page) {
-  return progress.create({ page, step: PAGES.indexOf(page), steps: STEPS });
+  const s = { page, step: PAGES.indexOf(page), steps: STEPS };
+  status.set(s);
+  return progress.create(s);
 }
 
 export async function getProgress(): Promise<Partial<Status>> {
@@ -29,6 +18,7 @@ export async function getProgress(): Promise<Partial<Status>> {
     .take(1)
     .toArray();
   if (latest.length) {
+    status.set(latest[0]);
     return latest[0];
   }
   return {};

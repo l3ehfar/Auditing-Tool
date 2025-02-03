@@ -20,7 +20,6 @@
 
   // let timeDisplay = writable(formatTime(timeLeft));
 
-
   // function startTimer() {
   //   timerInterval = setInterval(() => {
   //     timeLeft -= 1;
@@ -31,7 +30,6 @@
   //     }
   //   }, 1000);
   // }
-
 
   // startTimer();
 
@@ -74,7 +72,6 @@
       zoomLevelStore.set(zoomLevel);
     }
   }
-
 </script>
 
 <!-- <h1 class="title">Dataset Browser</h1> -->
@@ -85,7 +82,7 @@
         class="tooltip tooltip-open tooltip-accent tooltip-right"
         data-tip="choose a job profession"
       > -->
-        <!-- <div class="selector" use:marcelle={selectClass}></div> -->
+      <!-- <div class="selector" use:marcelle={selectClass}></div> -->
       <!-- </div> -->
       <div class="timer-display">
         <!-- Timer: {$timeDisplay} -->
@@ -143,7 +140,7 @@
     </div> -->
 </div>
 
-<!-- 
+<!--
 {#if showDatasetWindow}
     <div class="dataset-window" on:click={handleClickOutside} on:keydown={handleKeyDown}>
         <div class="window-content">
@@ -165,7 +162,7 @@
                 </button>
             </div>
             <div class="dataset-content">
-               
+
             </div>
         </div>
     </div>
@@ -187,7 +184,6 @@
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    height: 50vh;
   }
 
   /* .title {
@@ -222,7 +218,7 @@
     color: var(--heading-color);
     font-weight: normal;
 } */
-  /* 
+  /*
 .badge {
     margin: 2px;
     padding-top: 10px;
@@ -317,7 +313,7 @@ button.badge:hover {
 } */
 
   /* .custom-tooltip::before {
-    font-size: 0.70rem; 
+    font-size: 0.70rem;
     color: var(--heading-color);
 } */
 </style>
