@@ -48,7 +48,7 @@
   }
 </script>
 
-<div class="cont">
+<div class="max-w-3xl w-full bg-white mx-auto py-8">
   <section>
     <h1 class="font-title text-center text-lg transition-all duration-200 md:text-5xl w-full">
       Protocol Title
@@ -147,12 +147,6 @@
 </div>
 
 <style>
-  .cont {
-    max-width: 786px;
-    width: 100%;
-    margin: 2rem auto;
-  }
-
   section {
     margin: 2rem auto;
     max-width: 400px;

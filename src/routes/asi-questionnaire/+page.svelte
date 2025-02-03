@@ -1,13 +1,13 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
-  import { notification } from '@marcellejs/core';
   import { setProgress } from '$lib/marcelle/logging';
   import { type AsiQAnswers, asiQ, items } from '$lib/marcelle/asi-questionnaire';
   import type { User } from '$lib/marcelle';
   import { base } from '$app/paths';
   import { checkAndRedirect } from '$lib/redirections';
   import LikertScale from '$lib/LikertScale.svelte';
+  import { pageProgress } from '$lib/marcelle/progress';
 
   export let data: { user: User | null };
   let answers: Partial<AsiQAnswers> = {};
@@ -37,8 +37,10 @@
     'q22',
   ];
 
-  $: progress = (Object.keys(answers).filter((k) => keys.includes(k)).length * 100) / keys.length;
-  $: canSubmit = progress === 100;
+  $: pageProgress.set(
+    (Object.keys(answers).filter((k) => keys.includes(k)).length * 100) / keys.length,
+  );
+  $: canSubmit = $pageProgress === 100;
   $: disabled = answers.submitted === true;
 
   onMount(async () => {
@@ -126,45 +128,34 @@
   }
 </script>
 
-<div class="bg-base-100 min-h-screen p-4 flex items-center justify-center">
-  <div class="container mx-auto max-w-2xl">
-    <div class="bg-white shadow-lg rounded-lg p-8">
-      <div class="sticky-container">
-        <div class="w-full bg-gray-200 h-4 mb-4 rounded-full overflow-hidden">
-          <div class="bg-blue-500 h-4 rounded-full transition-all" style="width: {progress}%"></div>
-        </div>
+<div class="text-center mx-auto w-full max-w-3xl">
+  <div class="bg-white shadow-lg rounded-lg p-8">
+    <h1 class="text-2xl font-medium text-center mb-8">Ambivalent Sexism Inventory (ASI)</h1>
+    <h2 class="font-semibold mb-6">
+      The statements on this page concern women, men, and their relationships in contemporary
+      society. Please indicate the degree to which you agree or disagree with each statement by
+      clicking on the numbered buttons below. The inventory takes roughly 5 minutes to complete.
+    </h2>
+    <form class="space-y-6">
+      <div class="space-y-4">
+        {#each items as { question, name }}
+          <LikertScale
+            {question}
+            {name}
+            value={answers[name]}
+            on:change={(e) => record(name, e)}
+            {disabled}
+          />
+        {/each}
       </div>
-      <h1 class="text-xl font-medium text-center mb-8">Ambivalent Sexism Inventory (ASI)</h1>
-      <h2 class="text-sm font-semibold mb-6">
-        The statements on this page concern women, men, and their relationships in contemporary
-        society. Please indicate the degree to which you agree or disagree with each statement by
-        clicking on the numbered buttons below. The inventory takes roughly 5 minutes to complete.
-      </h2>
-      <form class="space-y-6">
-        <div class="space-y-4">
-          {#each items as { question, name }}
-            <LikertScale
-              {question}
-              {name}
-              value={answers[name]}
-              on:change={(e) => record(name, e)}
-              {disabled}
-            />
-          {/each}
-        </div>
-      </form>
-    </div>
-    <div class="text-center mt-8">
-      <button on:click={submit} class="btn btn-primary" disabled={!canSubmit}>Submit</button>
-    </div>
+    </form>
+  </div>
+  <div class="text-center my-6">
+    <button on:click={submit} class="btn btn-primary" disabled={!canSubmit}>Submit</button>
   </div>
 </div>
 
 <style>
-  .container {
-    text-align: center;
-  }
-
   .bg-white {
     max-width: 700px;
     margin: 0 auto;

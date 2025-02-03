@@ -17,65 +17,45 @@
   });
 </script>
 
-<div class="flex flex-col h-screen">
-  <div class="main-section">
-    <div class="left-panel">
-      {#if data.user?.condition === 'conditionThree'}
-        <div class="cond3">
-          <KeywordFilter />
-        </div>
-      {/if}
-      <div class="slot-section">
-        <Dataset />
-      </div>
-      <div class="dataset-section">
-        {#if data.user?.condition === 'conditionTwo'}
-          <DrawingInterface />
-        {:else}
-          <ClassicInterface />
-        {/if}
-      </div>
+<div class="flex h-screen w-screen">
+  <div class="h-full p-1 gap-1 w-1/3">
+    <div class="text-center">
+      <h2 class="text-xl my-2">Data Explorer</h2>
     </div>
-    <div class="right-panel">
-      <Schemas />
+    {#if data.user?.condition === 'conditionThree'}
+      <div class="cond3">
+        <KeywordFilter />
+      </div>
+    {/if}
+    <div class="slot-section">
+      <Dataset />
     </div>
+  </div>
+  <div class="p-1 px-12">
+    <div class="text-center mb-2">
+      <h2 class="text-xl my-2">Evidence Inspector</h2>
+    </div>
+    {#if data.user?.condition === 'conditionTwo'}
+      <DrawingInterface />
+    {:else}
+      <ClassicInterface />
+    {/if}
+  </div>
+  <div class="flex-1">
+    <div class="text-center">
+      <h2 class="text-xl my-2">Audit Report</h2>
+    </div>
+    <Schemas />
   </div>
 </div>
 
 <style>
-  .main-section {
-    display: flex;
-    flex: 1;
-    height: 100%;
-    width: 100%;
-  }
-
-  .left-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    padding: 2px;
-    gap: 2px;
-    background-color: oklch(var(--b2));
-  }
-
-  .slot-section,
-  .dataset-section {
+  .slot-section {
     flex: 1;
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 2px;
     overflow: hidden;
-  }
-
-  .right-panel {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100%;
-    padding: 2px;
   }
 </style>

@@ -33,6 +33,7 @@ export interface ImageInstance extends Instance {
   thumbnail: string;
   caption?: string;
   subset?: string;
+  public: boolean;
 }
 
 const HFmodel = huggingfaceModel({
@@ -145,6 +146,7 @@ export async function handleCapture() {
         y: labelValue,
         thumbnail: thumbnailData,
         caption: instanceCaption,
+        public: true,
       };
 
       const createdInstance = await trainingSet.create(instance);
