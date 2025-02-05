@@ -29,7 +29,7 @@
 
       success = true;
 
-      goto(`${base}/pre-questionnaire`).then(() => {
+      goto(`${base}/introduction`).then(() => {
         location.reload();
       });
     } catch (err: any) {
@@ -134,7 +134,7 @@
         {#await import('$lib/marcelle/logging').then(({ getProgress }) => getProgress())}
           <div>Retrieving session...</div>
         {:then progress}
-          <a href="{base}/{progress.page || 'pre-questionnaire'}" class="btn btn-secondary"
+          <a href="{base}/{progress.page || 'introduction'}" class="btn btn-secondary"
             >Continue the study</a
           >
         {/await}

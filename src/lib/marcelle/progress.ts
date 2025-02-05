@@ -1,6 +1,7 @@
 import { writable } from 'svelte/store';
 
 export const PHASES = [
+  { title: 'introduction', pages: ['introduction'], timeBased: false },
   {
     title: 'pre-questionnaires',
     pages: ['pre-questionnaire', 'asi-questionnaire'],

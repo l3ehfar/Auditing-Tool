@@ -30,7 +30,6 @@
     if (canvas) {
       canvas.isDrawingMode = isDrawingMode;
 
-      // Toggle drag overlay visibility
       if (dragOverlay) {
         dragOverlay.style.display = isDrawingMode ? 'none' : 'block';
       }
@@ -191,7 +190,54 @@
 </script>
 
 <div class="marcelle card">
-  <div class="conf-row">
+  <div class="button-row">
+    <button
+      class="btn btn-sm {isDrawingMode ? 'btn-active btn-secondary' : 'btn-secondary'}"
+      on:click={toggleDrawingMode}
+    >
+      {#if isDrawingMode}
+        <FontAwesomeIcon icon={faMousePointer} />
+      {:else}
+        <FontAwesomeIcon icon={faPencilAlt} />
+      {/if}
+    </button>
+
+    {#if isDrawingMode}
+      <div class="brush-settings">
+        <label for="brush-size" class="text-xs">Brush Size: {brushSize}px</label>
+        <input
+          id="brush-size"
+          type="range"
+          min="1"
+          max="50"
+          bind:value={brushSize}
+          on:input={updateBrushSettings}
+          class="range range-primary"
+        />
+        <div class="color-palette">
+          <!-- <button
+            class="btn btn-xs btn-circle"
+            style="background-color: #ff0000;"
+            on:click={() => changeBrushColor('#ff0000')}
+          ></button> -->
+          <button
+            class="btn btn-xs btn-circle"
+            style="background-color: #ffffff; border: 1px solid #ddd;"
+            on:click={() => changeBrushColor('#ffffff')}
+          ></button>
+          <button
+            class="btn btn-xs btn-circle"
+            style="background-color: #000000;"
+            on:click={() => changeBrushColor('#000000')}
+          ></button>
+        </div>
+      </div>
+    {/if}
+
+    <button class="btn btn-sm" on:click={undoLastAction}>
+      <FontAwesomeIcon icon={faRotateLeft} />
+    </button>
+  </div>
     <div
       class="group-components-container instax-style"
       draggable="true"
@@ -199,78 +245,30 @@
     >
       <div class="canvas-container">
         <canvas id="fabric-canvas" width="200" height="200"></canvas>
-        <!-- Transparent overlay to capture drag events -->
         <div id="drag-overlay" class="drag-overlay"></div>
       </div>
       <div class="marcelle-component caption" use:marcelle={caption}></div>
     </div>
-    <div class="group-components-container-small">
-      <button
-        class="btn btn-sm w-full {isDrawingMode ? 'btn-active btn-secondary' : 'btn-secondary'}"
-        on:click={toggleDrawingMode}
-      >
-        {#if isDrawingMode}
-          <FontAwesomeIcon icon={faMousePointer} />
-        {:else}
-          <FontAwesomeIcon icon={faPencilAlt} />
-        {/if}
-      </button>
-
-      {#if isDrawingMode}
-        <div class="brush-settings">
-          <label for="brush-size" class="text-xs">Brush Size: {brushSize}px</label>
-          <input
-            id="brush-size"
-            type="range"
-            min="1"
-            max="50"
-            bind:value={brushSize}
-            on:input={updateBrushSettings}
-            class="range range-primary"
-          />
-          <div class="color-palette">
-            <!-- <button
-              class="btn btn-xs btn-circle"
-              style="background-color: #ff0000;"
-              on:click={() => changeBrushColor('#ff0000')}
-            ></button> -->
-            <button
-              class="btn btn-xs btn-circle"
-              style="background-color: #ffffff; border: 1px solid #ddd;"
-              on:click={() => changeBrushColor('#ffffff')}
-            ></button>
-            <button
-              class="btn btn-xs btn-circle"
-              style="background-color: #000000;"
-              on:click={() => changeBrushColor('#000000')}
-            ></button>
-          </div>
-        </div>
-      {/if}
-
-      <button class="btn btn-sm w-full" on:click={undoLastAction}>
-        <FontAwesomeIcon icon={faRotateLeft} />
-      </button>
-      <div
-        class="tooltip tooltip-bottom tooltip-accent"
-        data-tip="the model may take a few seconds to generate captions"
-      >
-        <button class="btn btn-sm btn-secondary w-full" on:click={generateCaptionForCombinedImage}>
-          Generate Caption
-        </button>
-      </div>
-    </div>
+    <div class="generate-caption-container">
+    <div
+    class="tooltip tooltip-bottom tooltip-accent"
+    data-tip="the model may take a few seconds to generate captions"
+  >
+    <button class="btn btn-sm btn-secondary w-full" on:click={generateCaptionForCombinedImage}>
+      Generate Caption
+    </button>
   </div>
+</div>
 </div>
 
 <style>
   .marcelle.card {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    box-sizing: border-box;
-    width: 100%;
     align-items: center;
+    gap: 5px;
+    height: 100%;
+    width: 100%;
   }
 
   .btn {
@@ -286,12 +284,12 @@
     border: none;
   }
 
-  .conf-row {
+  /* .conf-row {
     display: flex;
     gap: 10px;
     height: 100%;
     align-items: center;
-  }
+  } */
 
   .marcelle-component {
     border: 1px solid #ddd;
@@ -326,12 +324,28 @@
     cursor: grab;
   }
 
+  .button-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+  }
+
   .group-components-container {
     display: flex;
     flex-direction: column;
     gap: 5px;
     align-items: center;
+    margin-top: 10px;
   }
+
+  .generate-caption-container {
+    margin-top: 10px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
 
   .instax-style {
     background-color: #fff;
@@ -374,17 +388,16 @@
     padding: 5px;
   }
 
-  .group-components-container-small {
+  /* .group-components-container-small {
     display: flex;
     flex-direction: column;
     gap: 5px;
     max-width: 100px;
     align-items: center;
-  }
+  } */
 
   .brush-settings {
-    margin-top: 10px;
-    width: 100%;
+    width: 100px;
     text-align: center;
   }
 

@@ -17,45 +17,65 @@
   });
 </script>
 
-<div class="flex h-screen w-screen">
-  <div class="h-full p-1 gap-1 w-1/3">
+<div class="grid h-screen w-screen grid-cols-layout gap-2 p-2">
+  <div class="flex flex-col h-full p-2 bg-white shadow rounded-lg">
     <div class="text-center">
-      <h2 class="text-xl my-2">Data Explorer</h2>
+      <h2 class="text-xl my-2">Dataset Explorer</h2>
     </div>
     {#if data.user?.condition === 'conditionThree'}
       <div class="cond3">
         <KeywordFilter />
       </div>
     {/if}
-    <div class="slot-section">
+    <div class="slot-section flex-1 overflow-auto p-2">
       <Dataset />
     </div>
   </div>
-  <div class="p-1 px-12">
+  <div class="flex flex-col h-full p-2 bg-white shadow rounded-lg">
     <div class="text-center mb-2">
-      <h2 class="text-xl my-2">Evidence Inspector</h2>
+      <h2 class="text-xl my-2">Model's Captions</h2>
     </div>
-    {#if data.user?.condition === 'conditionTwo'}
-      <DrawingInterface />
-    {:else}
-      <ClassicInterface />
-    {/if}
+    <div class="content-container">
+      {#if data.user?.condition === 'conditionTwo'}
+        <DrawingInterface />
+      {:else}
+        <ClassicInterface />
+      {/if}
+    </div>
   </div>
-  <div class="flex-1">
+  <div class="flex flex-col h-full p-2 bg-white shadow rounded-lg">
     <div class="text-center">
-      <h2 class="text-xl my-2">Audit Report</h2>
+      <h2 class="text-xl my-2">Bias Cards</h2>
     </div>
-    <Schemas />
+    <div class="flex-1 overflow-auto p-2 rounded">
+      <Schemas />
+    </div>
   </div>
 </div>
 
 <style>
   .slot-section {
+    min-height: 0;
     flex: 1;
     display: flex;
     justify-content: center;
-    align-items: center;
-    padding: 2px;
+    align-items: flex-start;
     overflow: hidden;
   }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr auto 2fr;
+    gap: 1rem;
+    height: 100%;
+    width: 100%;
+  }
+
+  .content-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 0; 
+  }
+
 </style>
