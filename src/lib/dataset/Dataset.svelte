@@ -7,32 +7,6 @@
   import { derived } from 'svelte/store';
   import { writable } from 'svelte/store';
 
-  // let timeLeft = 300;
-  // let timerInterval;
-
-  // function formatTime(seconds: number): string {
-  //   const minutes = Math.floor(seconds / 60);
-  //   const remainingSeconds = seconds % 60;
-  //   return `${minutes.toString().padStart(2, '0')}:${remainingSeconds
-  //     .toString()
-  //     .padStart(2, '0')}`;
-  // }
-
-  // let timeDisplay = writable(formatTime(timeLeft));
-
-  // function startTimer() {
-  //   timerInterval = setInterval(() => {
-  //     timeLeft -= 1;
-  //     timeDisplay.set(formatTime(timeLeft));
-
-  //     if (timeLeft <= 0) {
-  //       clearInterval(timerInterval);
-  //     }
-  //   }, 1000);
-  // }
-
-  // startTimer();
-
   // let showDatasetWindow: boolean = false;
   let zoomLevel: number = 1;
 
@@ -42,22 +16,6 @@
     ($selected) => $selected.length,
   );
 
-  // function toggleDatasetWindow(): void {
-  //     showDatasetWindow = !showDatasetWindow;
-  // }
-
-  // function handleClickOutside(event: MouseEvent): void {
-  //     const modalContent = document.querySelector('.dataset-window .window-content') as HTMLElement;
-  //     if (modalContent && !modalContent.contains(event.target as Node)) {
-  //         showDatasetWindow = false;
-  //     }
-  // }
-
-  // function handleKeyDown(event: KeyboardEvent): void {
-  //     if (event.key === 'Escape') {
-  //         showDatasetWindow = false;
-  //     }
-  // }
 
   function zoomIn(): void {
     if (zoomLevel < 2) {
@@ -74,16 +32,10 @@
   }
 </script>
 
-<!-- <h1 class="title">Dataset Browser</h1> -->
 <div class="content">
   <div class="marcelle card">
     <div class="conf-row dataset-tools">
-      <!-- <div
-        class="tooltip tooltip-open tooltip-accent tooltip-right"
-        data-tip="choose a job profession"
-      > -->
-      <!-- <div class="selector" use:marcelle={selectClass}></div> -->
-      <!-- </div> -->
+
       <div class="timer-display">
         <!-- Timer: {$timeDisplay} -->
       </div>
@@ -95,78 +47,13 @@
         <button class="icon" on:click={zoomIn}>
           <FontAwesomeIcon icon={faMagnifyingGlassPlus} />
         </button>
-        <!-- <div class="tooltip tooltip-left tooltip-secondary custom-tooltip" data-tip="Hold Ctrl (or Cmd on Mac) to select multiple images. Hold Shift to select all images between the first and last clicked.">
-                    <div class="badge badge-outline">
-                        selected: {$selectedCount}
-                    </div>
-                </div>
-                {#if $selectedCount > 0}
-                    <button class="badge badge-error gap-2" on:click={() => datasetExplorerComponent.$selected.set([])}>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          class="inline-block h-4 w-4 stroke-current">
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                        cancel selection
-                    </button>
-                {/if} -->
+     
       </div>
     </div>
     <div use:marcelle={datasetExplorerComponent} class="dataset" />
   </div>
-  <!-- <div class="conf-row btn-container">
-        <div class="dropdown dropdown-top dropdown-end">
-            <div tabIndex={0} role="button" class="btn btn-sm m-1 btn-primary">Explore Subsets</div>
-            <ul tabIndex={0} class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
-              <li><button on:click={toggleDatasetWindow}>Subset 1</button></li>
-              <li><button on:click={toggleDatasetWindow}>Subset 2</button></li>
-            </ul>
-          </div>
-
-        <div class="dropdown dropdown-top">
-            <div tabIndex={0} role="button" class="btn btn-sm m-1 btn-primary">Add to Subset</div>
-            <ul tabIndex={0} class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
-                <li><button>Subset 1</button></li>
-                <li><button>Subset 2</button></li>
-                <li><button>Make a new subset</button></li>
-            </ul>
-        </div>
-    </div> -->
+ 
 </div>
-
-<!--
-{#if showDatasetWindow}
-    <div class="dataset-window" on:click={handleClickOutside} on:keydown={handleKeyDown}>
-        <div class="window-content">
-            <div class="window-header">
-                <h3>Dataset Subset</h3>
-                <button class="btn btn-xs btn-outline btn-error" on:click={toggleDatasetWindow}>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      class="inline-block h-4 w-4 stroke-current">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                    close
-                </button>
-            </div>
-            <div class="dataset-content">
-
-            </div>
-        </div>
-    </div>
-{/if} -->
 
 <style>
   :global(body) {
@@ -184,7 +71,10 @@
     margin: 0 auto;
     display: flex;
     flex-direction: column;
+    height: 100vh; 
+    overflow: hidden; 
   }
+
 
   /* .title {
     position: absolute;
@@ -195,11 +85,12 @@
     margin-top: 10px;
 } */
 
-  .card {
+.card {
     padding-top: 0;
     display: flex;
     flex-direction: column;
-    height: 100%;
+    height: 100vh; 
+    overflow: hidden; 
   }
 
   .selector {
@@ -241,21 +132,21 @@ button.badge:hover {
 
   .dataset-tools {
     display: flex;
-    justify-content: space-between; /* Ensures the left and right side split */
-    align-items: center; /* Vertically center the items */
+    justify-content: space-between; 
+    align-items: center;
     padding-top: 10px;
     margin-bottom: 4px;
   }
 
   .right-tools {
-    display: flex; /* Align elements in a row */
+    display: flex; 
     align-items: center;
   }
 
   .dataset {
     flex-grow: 1;
-    overflow: auto;
-    max-height: calc(100% - 50px);
+    overflow: auto; 
+    max-height: calc(100vh - 50px); 
   }
 
   .tooltip::before {

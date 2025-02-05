@@ -4,7 +4,7 @@
   import { getPhase, pageProgress, PHASES } from './marcelle/progress';
 </script>
 
-<div class="navbar bg-base-100 text-sm min-h-0">
+<div class="navbar bg-base-100 text-sm min-h-0 sticky top-0 z-50 shadow-md">
   <div class="flex-1 navbar-start">
     <a class="btn btn-ghost btn-sm" href="{base}/">Auditing Study</a>
     <div>

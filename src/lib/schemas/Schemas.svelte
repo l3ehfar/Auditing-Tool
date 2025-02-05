@@ -208,11 +208,11 @@
   }
 </script>
 
-<div class="marcelle-card bg-slate-100">
+<div class="marcelle-card">
   <div class="mx-auto w-full flex flex-col justify-center gap-4">
     {#each $cards as card (card.id)}
       <div class="card shadow-lg bg-base-100 p-4">
-        <h2 class="my-2 mx-4">Hypothesis {card.index}</h2>
+        <h2 class="text-sm my-2 mx-4">Bias {card.index}</h2>
         <div class="card-body">
           <button
             class="btn btn-xs btn-circle btn-error btn-outline absolute top-2 right-2"
@@ -235,21 +235,16 @@
             </svg>
           </button>
 
+          <h4 class="text-xs text-gray-500 font-medium">write Description:</h4>
           <textarea
             bind:value={card.description}
             class="textarea textarea-xs textarea-accent textarea-bordered w-full"
-            placeholder="Add your hypothesis here"
+            placeholder="Describe the bias here"
             on:input={() => updateHypothesis(card.id, { description: card.description })}
             disabled={isTimerFinished}
           ></textarea>
 
-          {#if card.evidence.length === 0}
-            <div
-              class="tooltip tooltip-open tooltip-accent"
-              data-tip="drag and drop evidence"
-            ></div>
-          {/if}
-
+          <h4 class="text-xs text-gray-500 font-medium">drag and drop Supporting Examples:</h4>
           <div
             class="grid grid-cols-5 gap-2 p-4 border border-dashed border-gray-300 rounded-lg min-h-[100px]"
             class:disabled={isTimerFinished}
@@ -293,20 +288,17 @@
       </div>
     {/each}
     <div class="text-center">
-      <button class="btn btn-sm btn-primary" on:click={createHypothesis}>Add Hypothesis</button>
+      <button class="btn btn-sm btn-primary" on:click={createHypothesis}>Document New Bias</button>
     </div>
   </div>
 </div>
 
 <style>
-  .btn {
-    font-weight: 100;
-  }
 
   .marcelle-card {
     height: 100vh;
+    overflow-x: hidden;
     overflow-y: auto;
-    padding: 1rem;
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -323,6 +315,7 @@
     padding: 0 !important;
     box-sizing: border-box;
     min-height: 100px;
+    box-shadow: 1px 1px 2px 1px rgba(0, 0, 0, 0.1);
   }
 
   img {
@@ -341,7 +334,7 @@
   }
 
   .dropped-item h3 {
-    font-size: 0.5rem;
+    font-size: 0.55rem;
     text-align: center;
   }
 
