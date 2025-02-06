@@ -16,11 +16,17 @@
   </div>
   <div class="flex-none flex flex-col mx-4 gap-2">
     {#if getPhase($status.page).timeBased}
-      TODO: timer
+    <div class="conf-row">
+      <!-- timer : 15:35 -->
+       <button class="btn btn-xs btn-primary">help</button>
+       <progress class="progress w-40" value={$pageProgress} max="100"></progress>
+    </div>
+      
     {:else}
       <span>Page Progress: {Math.round($pageProgress)}%</span>
+      <progress class="progress w-40" value={$pageProgress} max="100"></progress>
     {/if}
-    <progress class="progress w-40" value={$pageProgress} max="100"></progress>
+    
   </div>
 </div>
 
