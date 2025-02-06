@@ -63,6 +63,17 @@
     overflow: hidden;
   }
 
+  .flex {
+    height: calc(100vh - 5rem);
+    min-height: 0;
+  }
+
+  .flex-1 {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
   .grid {
     display: grid;
     grid-template-columns: 1fr auto 2fr;
@@ -75,7 +86,6 @@
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    padding: 0; 
+    padding: 0;
   }
-
 </style>

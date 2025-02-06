@@ -20,8 +20,8 @@
   $: disableInputs = answers.submitted === true;
 
   onMount(async () => {
-    await checkAndRedirect(data.user, 'consent');
-    setProgress('consent');
+    await checkAndRedirect(data.user, 'introduction');
+    setProgress('introduction');
     answers = await consent.retrieve();
   });
 
@@ -93,8 +93,8 @@
         various images. You will have access to a predefined set of images. An interface will allow
         you to explore an image dataset and see model's generated caption for each image. <br /> You
         have to document the observed gender biases using “cards” where you can write a textual description
-        of the bias, and drag and drop images that illustrate the bias. Your goal is to give a comprehensive
-        overview of gender bias in the captioning model, as well as the factors in the image that contribute
+        of the bias, and drag and drop images that illustrate the bias. Your goal is to give a <strong>comprehensive
+            overview of gender bias</strong> in the captioning model, as well as the factors in the image that contribute
         to bias.
       </p>
     </section>
@@ -109,6 +109,23 @@
         Paris-Saclay. However, payments is conditioned to the completion of the study.
       </p>
     </section>
+
+    <section class="mt-6">
+        <h2 class="text-xl font-semibold">Screening-Out Criteria</h2>
+        <p>
+            Participants may be screened out from the study in the following cases:
+        </p>
+        <ul class="list-disc list-inside mt-4">
+            <li><strong>Not agreeing to the consent form</strong></li>
+            <li><strong>Voluntarily leaving the study at any point</strong></li>
+            <li><strong>Not finishing the study for any reason</strong> – If you do not complete all the required steps, you will be screened out.</li>
+            <li><strong>Failing two attention checks</strong></li>
+            <li><strong>Failing the training phase</strong> – The training includes multiple parts, and failing each part twice will result in screening out.</li>
+            <li><strong>Inactivity tracking</strong> – Your activity during the task is tracked, and if you remain inactive for 3 minutes, you will receive a notification. Receiving three notifications will result in exclusion.</li>
+            <li><strong>Technical issues</strong> – If a technical issue prevents you from completing the study, we will compensate you accordingly.</li>
+        </ul>
+        <p>However, for all other screening-out cases, you will be required to return the submission and will not be paid. <strong>This is not considered a rejection.</strong></p>
+      </section>
 
     <section class="mt-6">
       <h2 class="text-xl font-semibold">Your rights to confidentiality and privacy</h2>
