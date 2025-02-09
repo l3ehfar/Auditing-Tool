@@ -77,6 +77,7 @@
             <option value="" disabled>Select...</option>
             <option>High school or equivalent</option>
             <option>College</option>
+            <option>Associate Degree</option>
             <option>Bachelor's Degree</option>
             <option>Master's Degree</option>
             <option>Doctoral degree</option>
@@ -123,11 +124,11 @@
             on:change={(e) => record('intuitive', e)}
           >
             <option value="" disabled>Select...</option>
-            <option value="1"> (1) Not at all</option>
-            <option value="2"> (2) Only a little</option>
-            <option value="3"> (3) To some extent</option>
-            <option value="4"> (4) Rather much</option>
-            <option value="5"> (5) Very much</option>
+            <option value="1"> (1) Not at all (have mostly just heard about the term)</option>
+            <option value="2"> (2) Only a little (have read some non-technical materials or explainers on the topic)</option>
+            <option value="3"> (3) To some extent (have read technical materials or explainers on the topic)</option>
+            <option value="4"> (4) Rather much (have taken a course on this topic)</option>
+            <option value="5"> (5) Very much (have taken multiple courses on this topic)</option>
           </select>
         </div>
 
@@ -143,11 +144,11 @@
             on:change={(e) => record('effort', e)}
           >
             <option value="" disabled>Select...</option>
-            <option value="1"> (1) Not at all</option>
-            <option value="2"> (2) Only a little</option>
-            <option value="3"> (3) To some extent</option>
-            <option value="4"> (4) Rather much</option>
-            <option value="5"> (5) Very much</option>
+            <option value="1"> (1) Not at all (have mostly just heard about the term)</option>
+            <option value="2"> (2) Only a little (have read some non-technical materials or explainers on the topic)</option>
+            <option value="3"> (3) To some extent (have read technical materials or explainers on the topic)</option>
+            <option value="4"> (4) Rather much (have taken a course on this topic)</option>
+            <option value="5"> (5) Very much (have taken multiple courses on this topic)</option>
           </select>
         </div>
       </form>

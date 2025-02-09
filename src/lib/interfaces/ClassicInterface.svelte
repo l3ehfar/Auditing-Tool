@@ -3,6 +3,8 @@
   import { marcelle } from '$lib/utils';
   import { onMount, onDestroy, tick } from 'svelte';
   import * as fabric from 'fabric';
+  import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
+  import { faUpDownLeftRight } from '@fortawesome/free-solid-svg-icons';
 
   let canvas: fabric.Canvas | null = null;
   let imageObject: fabric.Image | null = null;
@@ -126,6 +128,9 @@
       <div id="drag-overlay" class="drag-overlay"></div>
     </div>
     <div class="marcelle-component caption" use:marcelle={caption}></div>
+    <div class="drag-icon">
+      <FontAwesomeIcon icon={faUpDownLeftRight} />
+    </div>
   </div>
 </div>
 
@@ -177,9 +182,18 @@
 
   .group-components-container {
     display: flex;
+    position: relative;
     flex-direction: column;
     gap: 5px;
     align-items: center;
+  }
+
+  .drag-icon {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    cursor: grab;
+    color: oklch(var(--in));
   }
 
   .instax-style {

@@ -8,7 +8,12 @@
   import { marcelle } from '$lib/utils';
   import { onMount, onDestroy, tick } from 'svelte';
   import * as fabric from 'fabric';
-  import { faPencilAlt, faMousePointer, faRotateLeft } from '@fortawesome/free-solid-svg-icons';
+  import {
+    faPencilAlt,
+    faMousePointer,
+    faRotateLeft,
+    faUpDownLeftRight,
+  } from '@fortawesome/free-solid-svg-icons';
   import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
   import { droppedItems } from '$lib/store';
 
@@ -108,6 +113,9 @@
     canvas.on('mouse:up', () => {
       if (canvas.isDrawingMode) {
         canvasHistory.push(canvas.toJSON());
+        (async () => {
+          await generateCaptionForCombinedImage();
+        })();
       }
     });
 
@@ -179,12 +187,22 @@
     }
   }
 
-  function generateCaptionForCombinedImage() {
+  async function generateCaptionForCombinedImage() {
+    caption.$value.set('Caption is being generated...'); // Show temporary message
+
     const combinedImage = getCanvasImage();
-    if (combinedImage) {
-      generateCaption(combinedImage);
-    } else {
+    if (!combinedImage) {
+      caption.$value.set('Failed to capture image'); // Handle errors
       console.error('Failed to capture canvas image');
+      return;
+    }
+
+    try {
+      const newCaption = await generateCaption(combinedImage); // Generate caption
+      caption.$value.set(newCaption); // Update with actual caption
+    } catch (error) {
+      caption.$value.set('Error generating caption'); // Error fallback
+      console.error('Error generating caption:', error);
     }
   }
 </script>
@@ -238,27 +256,26 @@
       <FontAwesomeIcon icon={faRotateLeft} />
     </button>
   </div>
-    <div
-      class="group-components-container instax-style"
-      draggable="true"
-      on:dragstart={onDragStart}
-    >
-      <div class="canvas-container">
-        <canvas id="fabric-canvas" width="200" height="200"></canvas>
-        <div id="drag-overlay" class="drag-overlay"></div>
-      </div>
-      <div class="marcelle-component caption" use:marcelle={caption}></div>
+  <div class="group-components-container instax-style" draggable="true" on:dragstart={onDragStart}>
+    <div class="canvas-container">
+      <canvas id="fabric-canvas" width="200" height="200"></canvas>
+      <div id="drag-overlay" class="drag-overlay"></div>
     </div>
-    <div class="generate-caption-container">
-    <div
-    class="tooltip tooltip-bottom tooltip-accent"
-    data-tip="the model may take a few seconds to generate captions"
-  >
-    <button class="btn btn-sm btn-secondary w-full" on:click={generateCaptionForCombinedImage}>
-      Generate Caption
-    </button>
+    <div class="marcelle-component caption" use:marcelle={caption}></div>
+    <div class="drag-icon">
+      <FontAwesomeIcon icon={faUpDownLeftRight} />
+    </div>
   </div>
-</div>
+  <!-- <div class="generate-caption-container">
+    <div
+      class="tooltip tooltip-bottom tooltip-accent"
+      data-tip="the model may take a few seconds to generate captions"
+    >
+      <button class="btn btn-sm btn-secondary w-full" on:click={generateCaptionForCombinedImage}>
+        Generate Caption
+      </button>
+    </div>
+  </div> -->
 </div>
 
 <style>
@@ -282,6 +299,7 @@
     padding: 5px;
     text-align: center;
     border: none;
+    cursor: grab;
   }
 
   /* .conf-row {
@@ -333,10 +351,19 @@
 
   .group-components-container {
     display: flex;
+    position: relative;
     flex-direction: column;
     gap: 5px;
     align-items: center;
     margin-top: 10px;
+  }
+
+  .drag-icon {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    cursor: grab;
+    color: oklch(var(--in));
   }
 
   .generate-caption-container {
@@ -345,7 +372,6 @@
     display: flex;
     justify-content: center;
   }
-
 
   .instax-style {
     background-color: #fff;

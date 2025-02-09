@@ -56,7 +56,7 @@ export const items: Array<{ question: string; name: keyof AsiQAnswers }> = [
   },
   { question: '4. Most women interpret innocent remarks or acts as being sexist.', name: 'q4' },
   { question: '5. Women are too easily offended.', name: 'q5' },
-  { question: '5. Please choose number 4.', name: 'q23' },
+  { question: '5. This is an attention check. Please choose number 4.', name: 'q23' },
   {
     question:
       '6. People are often truly happy in life without being romantically involved with a member of the other sex.',
@@ -81,7 +81,7 @@ export const items: Array<{ question: string; name: keyof AsiQAnswers }> = [
     name: 'q16',
   },
   { question: '17. A good woman should be set on a pedestal by her man.', name: 'q17' },
-  { question: '17. Please choose number 3.', name: 'q24' },
+  { question: '17. This is an attention check. Please choose number 3.', name: 'q24' },
   {
     question:
       '18. There are actually very few women who get a kick out of teasing men by seeming sexually available and then refusing male advances.',

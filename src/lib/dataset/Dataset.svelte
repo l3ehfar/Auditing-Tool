@@ -7,7 +7,6 @@
   import { derived } from 'svelte/store';
   import { writable } from 'svelte/store';
 
-  // let showDatasetWindow: boolean = false;
   let zoomLevel: number = 1;
 
   // Create a derived store to count the selected items
@@ -34,10 +33,10 @@
 
 <div class="content">
   <div class="marcelle card">
-    <div class="conf-row dataset-tools">
+    <!-- <div class="conf-row dataset-tools">
 
       <div class="timer-display">
-        <!-- Timer: {$timeDisplay} -->
+        Timer: {$timeDisplay}
       </div>
 
       <div class="right-tools">
@@ -49,7 +48,7 @@
         </button>
      
       </div>
-    </div>
+    </div> -->
     <div use:marcelle={datasetExplorerComponent} class="dataset" />
   </div>
  

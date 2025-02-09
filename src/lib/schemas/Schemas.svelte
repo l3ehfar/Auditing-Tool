@@ -294,7 +294,6 @@
 </div>
 
 <style>
-
   .marcelle-card {
     height: 100%;
     overflow-x: hidden;
@@ -321,6 +320,10 @@
   img {
     max-height: 100px;
     object-fit: cover;
+  }
+
+  .textarea {
+    border-radius: 8px; 
   }
 
   .dropped-item {

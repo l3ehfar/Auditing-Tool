@@ -279,11 +279,14 @@
         </div>
         <!-- <button on:click={resetDatasetFilter} class="btn btn-primary btn-xs">Reset Filter</button> -->
         <div class="badge-container">
-          {#each selectedWordsList as word (word)}
+          {#each selectedWordsList as word, index (word)}
             <div class="badge badge-accent">
               {word}
               <button class="badge-remove-btn" on:click={() => removeWord(word)}>✕</button>
             </div>
+            {#if index < selectedWordsList.length - 1}
+              <span class="word-operator">AND</span>
+            {/if}
           {/each}
         </div>
       </div>
@@ -300,6 +303,13 @@
     box-sizing: border-box;
     width: 100%;
     align-items: center;
+  }
+
+  .word-operator {
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #00796b;
+    margin: 0 5px;
   }
 
   .badge-container {
