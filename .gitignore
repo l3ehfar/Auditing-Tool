@@ -9,3 +9,4 @@ node_modules
 .vercel
 .output
 backend/data/debug.db
+backend/data/debug.db
