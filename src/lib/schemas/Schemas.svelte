@@ -13,110 +13,61 @@
     updateHypothesis,
     type Hypothesis,
     removeHypothesis,
+    saveCompleteHypotheses,
   } from './hypothesis_storage';
-
-  let overallTimeLeft = 1800;
-  const timerDisplay = writable(overallTimeLeft);
-  let isSubmitDisabled = true;
-  let showSubmitButton = false;
-  let isTimerFinished = false;
-
-  // function checkIfSubmitEnabled() {
-  //   const allCards = get(cards);
-  //   isSubmitDisabled = allCards.some((card) =>
-  //     Object.values(card.questionnaire)
-  //       .slice(0, 3)
-  //       .some((value) => !value.trim()),
-  //   );
-
-  //   if (!isSubmitDisabled && showSubmitButton) {
-  //     notification({
-  //       title: 'Ready to Submit',
-  //       message: 'All questions have been answered. You can now submit.',
-  //       duration: 3000,
-  //     });
-  //   }
-  // }
-
-  // cards.subscribe(() => {
-  //   checkIfSubmitEnabled();
-  // });
+  import { isTimerFinished, timeLeft } from '$lib/marcelle/timer';
+  import { base } from '$app/paths';
 
   onMount(() => {
     fetchHypotheses();
-
-    // const savedTime = localStorage.getItem('schemasTimer');
-    // overallTimeLeft = savedTime ? JSON.parse(savedTime) : overallTimeLeft;
-    // timerDisplay.set(overallTimeLeft);
-
-    // if (overallTimeLeft <= 0) {
-    //   isTimerFinished = true;
-    //   showSubmitButton = true;
-    //   checkIfSubmitEnabled();
-    // }
-
-    // const timer = setInterval(() => {
-    //   if (overallTimeLeft > 0) {
-    //     overallTimeLeft -= 1;
-    //     timerDisplay.set(overallTimeLeft);
-    //     localStorage.setItem('schemasTimer', JSON.stringify(overallTimeLeft));
-
-    //     if (overallTimeLeft === 600) {
-    //       notification({
-    //         title: 'Reminder',
-    //         message: 'You have 10 minutes to organize and submit your hypotheses.',
-    //         duration: 8000,
-    //       });
-    //     } else if (overallTimeLeft === 1500) {
-    //       notification({
-    //         title: 'Reminder',
-    //         message: 'You must provide at least 2 hypotheses.',
-    //         duration: 10000,
-    //       });
-    //     } else if (overallTimeLeft === 1200) {
-    //       notification({
-    //         title: 'Reminder',
-    //         message: 'Have you tested your hypotheses?',
-    //         duration: 8000,
-    //       });
-    //     } else if (overallTimeLeft === 900) {
-    //       notification({
-    //         title: 'Reminder',
-    //         message: 'Have you enough examples to support your hypotheses?',
-    //         duration: 8000,
-    //       });
-    //     }
-    //   } else {
-    //     clearInterval(timer);
-    //     isTimerFinished = true;
-    //     showSubmitButton = true;
-    //     checkIfSubmitEnabled();
-
-    //     cards.update((currentCards) =>
-    //       currentCards.map((card) => ({
-    //         ...card,
-    //         showQuestionnaire: true,
-    //       })),
-    //     );
-
-    //     if (isSubmitDisabled) {
-    //       notification({
-    //         title: 'Time’s up!',
-    //         message: 'Please fill out the questionnaire in each card.',
-    //         duration: 5000,
-    //       });
-    //     }
-
-    //     saveCardsState();
-    //   }
-    // }, 1000);
-
     startActivityTracking();
+
+    const unsubscribe = isTimerFinished.subscribe((finished) => {
+      if (finished) {
+        (async () => {
+          await saveCompleteHypotheses();
+          goto(`${base}/hypotheses-questionnaire`);
+        })();
+      }
+    });
+
+    const unsubscribeTimer = timeLeft.subscribe(($timeLeft) => {
+      if ($timeLeft === 60) {
+        notifyUserOfMissingFields();
+      }
+    });
 
     return () => {
       stopActivityTracking();
+      unsubscribeTimer();
+      unsubscribe();
     };
   });
+
+  function notifyUserOfMissingFields() {
+    cards.update((currentCards) =>
+      currentCards.map((card) => ({
+        ...card,
+        missingFields: {
+          description: !card.description.trim(),
+          evidence: card.evidence.length === 0,
+        },
+      })),
+    );
+
+    const incompleteCards = get(cards).filter(
+      (card) => card.missingFields?.description || card.missingFields?.evidence,
+    );
+
+    if (incompleteCards.length > 0) {
+      notification({
+        title: 'Missing Information',
+        message: 'For each card you should describe the bias and have at least one example.',
+        type: 'danger',
+        duration: 8000,
+      });
+    }
+  }
 
   async function onDrop(event: DragEvent, card: Hypothesis) {
     event.preventDefault();
@@ -176,36 +127,6 @@
 
     draggedItem = null;
   }
-
-  function submitFinalResults() {
-    if (isSubmitDisabled) return;
-
-    const schemas = get(cards);
-
-    const incompleteCards = schemas.filter((card) =>
-      Object.values(card.questionnaire).some((value) => !value.trim()),
-    );
-
-    if (incompleteCards.length > 0) {
-      notification({
-        title: 'Incomplete Questionnaire',
-        message: 'Please answer all questions in each card.',
-        duration: 3000,
-        type: 'danger',
-      });
-      return;
-    }
-
-    console.log('Submitted Results:', schemas);
-
-    notification({
-      title: 'Results Submitted',
-      message: 'Your results have been successfully submitted.',
-      duration: 3000,
-    });
-
-    goto('/post-questionnaire');
-  }
 </script>
 
 <div class="marcelle-card">
@@ -217,7 +138,6 @@
           <button
             class="btn btn-xs btn-circle btn-error btn-outline absolute top-2 right-2"
             on:click={() => removeHypothesis(card.id)}
-            disabled={isTimerFinished}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -238,31 +158,33 @@
           <h4 class="text-xs text-gray-500 font-medium">write Description:</h4>
           <textarea
             bind:value={card.description}
-            class="textarea textarea-xs textarea-accent textarea-bordered w-full"
+            class="textarea textarea-xs textarea-accent textarea-bordered w-full {card.missingFields
+              ?.description
+              ? 'border-red-500 border-2'
+              : ''}"
             placeholder="Describe the bias here"
             on:input={() => updateHypothesis(card.id, { description: card.description })}
-            disabled={isTimerFinished}
-          ></textarea>
-
+          />
           <h4 class="text-xs text-gray-500 font-medium">drag and drop Supporting Examples:</h4>
           <div
-            class="grid grid-cols-5 gap-2 p-4 border border-dashed border-gray-300 rounded-lg min-h-[100px]"
-            class:disabled={isTimerFinished}
-            on:drop={(event) => isTimerFinished || onDrop(event, card)}
-            on:dragover={(event) => isTimerFinished || allowDrop(event)}
+            class="grid grid-cols-5 gap-2 p-4 border border-dashed rounded-lg min-h-[100px] {card
+              .missingFields?.evidence
+              ? 'border-red-500 border-2'
+              : 'border-gray-300'}"
+            on:drop={(event) => onDrop(event, card)}
+            on:dragover={(event) => allowDrop(event)}
           >
             {#each card.evidence as item (item.id)}
               <div
                 class="dropped-item p-1 bg-gray-100 border border-gray-300 rounded-md text-center relative"
-                draggable={!isTimerFinished}
-                on:dragstart={(event) => isTimerFinished || handleDragStart(event, card.id, item)}
+                draggable={true}
+                on:dragstart={(event) => handleDragStart(event, card.id, item)}
                 on:drop={(event) => handleDropOnItem(event, card.id, item.id)}
                 on:dragover={allowDrop}
               >
                 <button
                   class="btn btn-xs btn-circle btn-error absolute top-0 right-0"
                   on:click={() => removeEvidence(card, item.id)}
-                  disabled={isTimerFinished}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -323,7 +245,7 @@
   }
 
   .textarea {
-    border-radius: 8px; 
+    border-radius: 8px;
   }
 
   .dropped-item {

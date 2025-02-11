@@ -141,6 +141,7 @@
     padding: 5px;
     text-align: center;
     border: none;
+    cursor: grab;
   }
 
   :global(.card-title) {

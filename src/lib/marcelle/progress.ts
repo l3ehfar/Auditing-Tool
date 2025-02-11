@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { startTimer, loadTimer } from './timer';
 
 export const PHASES = [
   { title: 'introduction', pages: ['introduction'], timeBased: false },
@@ -9,7 +10,7 @@ export const PHASES = [
   },
   { title: 'training', pages: ['training'], timeBased: false },
   { title: 'auditing', pages: ['main'], timeBased: true },
-  { title: 'post-questionnaires', pages: ['post-questionnaire'], timeBased: false },
+  { title: 'post-questionnaires', pages: ['hypotheses-questionnaire', 'post-questionnaire'], timeBased: false },
 ];
 export const PAGES = PHASES.flatMap(({ pages }) => pages);
 export const STEPS = PAGES.length;
@@ -32,4 +33,11 @@ export function getPhase(page: string) {
     i++;
   }
   return {} as (typeof PHASES)[0];
+}
+
+export function startTimerIfNeeded(page: Page) {
+  if (getPhase(page).timeBased) {
+    loadTimer(); 
+    startTimer();
+  }
 }

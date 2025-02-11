@@ -20,10 +20,13 @@
     success = false;
 
     console.log('Signup initiated:', { email, condition });
-
+ 
     try {
       const res = await store.service('users').create({ prolificID, email, password, condition });
       console.log('Created user', res);
+
+      localStorage.setItem('user_timer', '180');
+
       const user = await store.login(email, password);
       console.log('Signup successful:', user);
 

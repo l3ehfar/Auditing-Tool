@@ -25,20 +25,6 @@
     answers = await preQ.retrieve();
   });
 
-  // Not sure this is still useful
-  function highlightUnansweredQuestions() {
-    const selects = document.querySelectorAll('select');
-    const unansweredQuestions = Array.from(selects).filter(
-      (select) => (select as HTMLSelectElement).value === '',
-    );
-
-    unansweredQuestions.forEach((select) => {
-      (select as HTMLSelectElement).style.border = '2px solid red';
-    });
-
-    return unansweredQuestions;
-  }
-
   function record(key: keyof typeof answers, e: any) {
     answers[key] = e.target.value;
     preQ.record(answers);
@@ -53,16 +39,10 @@
 
 <div class="text-center mx-auto w-full max-w-3xl">
   <div class="bg-white shadow-lg rounded-lg p-8">
-    <!-- <div class="sticky-container">
-      <div class="w-full bg-gray-200 h-4 mb-4 rounded-full overflow-hidden">
-        <div class="bg-blue-500 h-4 rounded-full transition-all" style="width: {progress}%"></div>
-      </div>
-    </div> -->
     <h1 class="text-2xl font-medium text-center mb-8">Pre-Questionnaire</h1>
     <section>
       <h2 class="text-lg font-semibold mb-6">Demographics</h2>
       <form class="space-y-6">
-        <!-- on:change={checkProgress} -->
         <div class="form-control">
           <label class="label font-medium text-sm">
             Indicate your highest level of education:
@@ -125,9 +105,13 @@
           >
             <option value="" disabled>Select...</option>
             <option value="1"> (1) Not at all (have mostly just heard about the term)</option>
-            <option value="2"> (2) Only a little (have read some non-technical materials or explainers on the topic)</option>
-            <option value="3"> (3) To some extent (have read technical materials or explainers on the topic)</option>
-            <option value="4"> (4) Rather much (have taken a course on this topic)</option>
+            <option value="2">
+              (2) A little (have read some non-technical materials or explainers on the topic)</option
+            >
+            <option value="3">
+              (3) To some extent (have read technical materials or explainers on the topic)</option
+            >
+            <option value="4"> (4) Quite a bit (have taken a course on this topic)</option>
             <option value="5"> (5) Very much (have taken multiple courses on this topic)</option>
           </select>
         </div>
@@ -144,11 +128,13 @@
             on:change={(e) => record('effort', e)}
           >
             <option value="" disabled>Select...</option>
-            <option value="1"> (1) Not at all (have mostly just heard about the term)</option>
-            <option value="2"> (2) Only a little (have read some non-technical materials or explainers on the topic)</option>
-            <option value="3"> (3) To some extent (have read technical materials or explainers on the topic)</option>
-            <option value="4"> (4) Rather much (have taken a course on this topic)</option>
-            <option value="5"> (5) Very much (have taken multiple courses on this topic)</option>
+            <option value="1"> (1) Not at all (just heard about them)</option>
+            <option value="2"> (2) A little (know their applications)</option>
+            <option value="3"> (3) To some extent (have worked with them)</option>
+            <option value="4">
+              (4) Quite a bit (read non-technical materials & worked with them)</option
+            >
+            <option value="5"> (5) Very much (familiar with technical details)</option>
           </select>
         </div>
       </form>
