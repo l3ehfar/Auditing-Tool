@@ -9,10 +9,12 @@
   <div class="flex-1 navbar-start">
     <a class="btn btn-ghost btn-sm" href="{base}/">Auditing Study</a>
     <div>
-      {#each PHASES as phase}
-        <span class:active={phase.pages.includes($status.page)} class="mx-2">{phase.title}</span> >
+      {#each PHASES as phase, index}
+        <span class:active={phase.pages.includes($status.page)} class="mx-2">{phase.title}</span>
+        {#if index < PHASES.length - 1}
+          <span> > </span>
+        {/if}
       {/each}
-      end
     </div>
   </div>
   <div class="flex-none flex items-center mx-4 gap-4">
@@ -34,4 +36,3 @@
     @apply font-bold text-green-800 underline;
   }
 </style>
-

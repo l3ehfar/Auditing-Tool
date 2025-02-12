@@ -70,7 +70,7 @@
   function submit() {
     disableInputs.set(true);
     canSubmit.set(false);
-    // goto(`${base}/post-questionnaire`);
+    goto(`${base}/post-questionnaire`);
   }
 </script>
 

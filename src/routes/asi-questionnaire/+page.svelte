@@ -161,12 +161,4 @@
     margin: 0 auto;
   }
 
-  .sticky-container {
-    position: sticky;
-    top: 0;
-    background-color: white;
-    z-index: 10;
-    padding: 10px 10px 1px 10px;
-    /* box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);  */
-  }
 </style>
