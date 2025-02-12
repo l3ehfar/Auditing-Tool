@@ -1,6 +1,7 @@
 import { store } from '$lib/marcelle';
 import { type ObjectId } from '@marcellejs/core';
 import { get, writable } from 'svelte/store';
+import { timeLeft } from '$lib/marcelle/timer';
 
 export interface Hypothesis {
   id: ObjectId;
@@ -37,9 +38,19 @@ export async function fetchHypotheses() {
     },
   }));
 
-  cards.set(updatedHypotheses);
-}
+  const storedMissingFields = JSON.parse(localStorage.getItem('missingFields') || '{}');
 
+  const hypothesesWithMissingFields = updatedHypotheses.map((hypothesis) => ({
+    ...hypothesis,
+    missingFields: storedMissingFields[hypothesis.id] || {
+      description: !hypothesis.description.trim(),
+      evidence: hypothesis.evidence.length === 0,
+    },
+  }));
+
+  cards.set(hypothesesWithMissingFields);
+
+}
 
 export async function createHypothesis() {
   const maxIndex = await service
@@ -49,6 +60,7 @@ export async function createHypothesis() {
     .take(1)
     .toArray();
   console.log('maxIndex', maxIndex);
+
   const index = maxIndex.length ? maxIndex[0].index + 1 : 1;
   const hp = await service.create({
     index,
@@ -58,25 +70,108 @@ export async function createHypothesis() {
   });
 
   console.log('created hp', hp);
-  cards.set([...get(cards), hp]);
+
+  // New hypothesis starts with missingFields set to false (no red borders yet)
+  const newCard = {
+    ...hp,
+    missingFields: {
+      description: false,
+      evidence: false,
+    },
+  };
+
+  cards.set([...get(cards), newCard]);
+
+  // Persist missingFields in localStorage initially
+  const missingFieldsMap = Object.fromEntries(
+    get(cards).map((card) => [card.id, card.missingFields])
+  );
+  localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
+
+  const unsubscribeTimer = timeLeft.subscribe(($timeLeft) => {
+    if ($timeLeft === 60) {
+      console.log("Triggering missingFields update at 60 seconds for", newCard.id);
+
+      cards.update((currentCards) =>
+        currentCards.map((c) =>
+          c.id === newCard.id
+            ? {
+              ...c,
+              missingFields: {
+                description: !c.description.trim(),
+                evidence: c.evidence.length === 0,
+              },
+            }
+            : c
+        )
+      );
+
+      const updatedMissingFieldsMap = Object.fromEntries(
+        get(cards).map((card) => [card.id, card.missingFields])
+      );
+      localStorage.setItem('missingFields', JSON.stringify(updatedMissingFieldsMap));
+
+      unsubscribeTimer(); 
+    }
+  });
 }
 
 export async function updateHypothesis(id: Hypothesis['id'], changes: Partial<Hypothesis>) {
   try {
     const newHp = await service.patch(id, changes);
     console.log('updated hypothesis:', newHp);
-    cards.update((currentCards) => currentCards.map((c) => (c.id === id ? newHp : c)));
-    return newHp;
+
+    let updatedHypothesis: HypothesisWithFields | null = null;
+    const $timeLeft = get(timeLeft); 
+
+    cards.update((currentCards) => {
+      const updatedCards = currentCards.map((c) => {
+        if (c.id === id) {
+          updatedHypothesis = {
+            ...newHp,
+            missingFields: $timeLeft <= 60
+              ? {
+                  description: !newHp.description.trim(),
+                  evidence: newHp.evidence.length === 0,
+                }
+              : c.missingFields, 
+          };
+          return updatedHypothesis;
+        }
+        return c;
+      });
+
+      const missingFieldsMap = Object.fromEntries(
+        updatedCards.map((card) => [card.id, (card as HypothesisWithFields).missingFields])
+      );
+      localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
+
+      return updatedCards;
+    });
+
+    return updatedHypothesis;
   } catch (error) {
     console.log('An error occurred while updating hypothesis', id);
+    return null;
   }
 }
+
 
 export async function removeHypothesis(id: Hypothesis['id']) {
   try {
     const removed = await service.remove(id);
     console.log('removed hypothesis:', removed);
-    cards.update((currentCards) => currentCards.filter((c) => c.id !== id));
+    cards.update((currentCards) => {
+      const updatedCards = currentCards.filter((c) => c.id !== id);
+
+      const missingFieldsMap = Object.fromEntries(
+        updatedCards.map((card) => [card.id, card.missingFields])
+      );
+      localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
+
+      return updatedCards;
+    });
+
   } catch (error) {
     console.log('An error occurred while removing hypothesis', id);
   }
@@ -96,19 +191,69 @@ export async function addEvidence(id: Hypothesis['id'], src: string, caption: st
     return x;
   });
   if (!exists) {
-    // TODO: improve this with "evidence" service?
     evidence.push({ id: crypto.randomUUID(), src, caption });
   }
   console.log('evidence', evidence);
-  return updateHypothesis(id, { evidence });
+  return updateHypothesis(id, { evidence }).then((updatedCard) => {
+    if (!updatedCard) return;
+
+    const $timeLeft = get(timeLeft);
+    console.log("Time Left during addEvidence:", $timeLeft);
+
+    cards.update((currentCards) =>
+      currentCards.map((c) =>
+        c.id === id
+          ? {
+              ...c,
+              missingFields: $timeLeft <= 60
+                ? {
+                    ...c.missingFields,
+                    evidence: updatedCard.evidence.length === 0,
+                  }
+                : c.missingFields,
+            }
+          : c
+      )
+    );
+
+    const missingFieldsMap = Object.fromEntries(
+      get(cards).map((card) => [card.id, card.missingFields])
+    );
+    localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
+  });
 }
 
 export async function removeEvidence(hypothesis: Hypothesis, evidenceId: string) {
   try {
     const evidence = hypothesis.evidence.filter((x) => x.id !== evidenceId);
-    return updateHypothesis(hypothesis.id, { evidence });
+    const updatedCard = await updateHypothesis(hypothesis.id, { evidence });
+
+    if (!updatedCard) {
+      console.error('Failed to update hypothesis after removing evidence');
+      return;
+    }
+
+    cards.update((currentCards) =>
+      currentCards.map((c) =>
+        c.id === hypothesis.id
+          ? {
+              ...c,
+              missingFields: {
+                ...c.missingFields,
+                evidence: updatedCard.evidence.length === 0, 
+              },
+            }
+          : c
+      )
+    );
+
+    const missingFieldsMap = Object.fromEntries(
+      get(cards).map((card) => [card.id, card.missingFields])
+    );
+    localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
+
   } catch (error) {
-    console.log('An error occurred whil trying to remove evidence with id:', evidenceId);
+    console.log('An error occurred while trying to remove evidence with id:', evidenceId, error);
   }
 }
 

@@ -31,8 +31,11 @@
       }
     });
 
+    let timerTriggered = false;
+
     const unsubscribeTimer = timeLeft.subscribe(($timeLeft) => {
-      if ($timeLeft === 60) {
+      if ($timeLeft === 60 && !timerTriggered) {
+        timerTriggered = true; 
         notifyUserOfMissingFields();
       }
     });
@@ -45,15 +48,25 @@
   });
 
   function notifyUserOfMissingFields() {
-    cards.update((currentCards) =>
-      currentCards.map((card) => ({
+    const $timeLeft = get(timeLeft);
+    if ($timeLeft > 60) return; 
+
+    cards.update((currentCards) => {
+      const updatedCards = currentCards.map((card) => ({
         ...card,
         missingFields: {
           description: !card.description.trim(),
           evidence: card.evidence.length === 0,
         },
-      })),
-    );
+      }));
+
+      const missingFieldsMap = Object.fromEntries(
+        updatedCards.map((card) => [card.id, card.missingFields]),
+      );
+      localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
+
+      return updatedCards;
+    });
 
     const incompleteCards = get(cards).filter(
       (card) => card.missingFields?.description || card.missingFields?.evidence,

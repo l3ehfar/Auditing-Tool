@@ -43,6 +43,18 @@
     canSubmit.set(progress === 100);
   }
 
+  function isCardCompleted(card) {
+    const requiredFields = ['question1', 'question2', 'question3']; 
+
+    return requiredFields.every((field) => {
+      return (
+        card.questionnaire[field] !== null &&
+        card.questionnaire[field] !== undefined &&
+        String(card.questionnaire[field]).trim() !== ''
+      );
+    });
+  }
+
   function saveAnswer(cardId: string, field: keyof Hypothesis['questionnaire'], value: string) {
     const updatedCards = get(cards).map((card) => {
       if (card.id === cardId) {
@@ -83,7 +95,11 @@
           <a
             href="#"
             on:click={() => selectCard(card.index)}
-            class={$selectedCardIndex === card.index ? 'bg-base-300' : 'bg-base-200'}
+            class={isCardCompleted(card)
+              ? 'bg-accent'
+              : $selectedCardIndex === card.index
+                ? 'bg-base-300'
+                : 'bg-base-200'}
           >
             Bias {card.index}
           </a>
@@ -297,5 +313,8 @@
   }
   h4 {
     margin-bottom: 5px;
+  }
+  li {
+    margin-top: 2px;
   }
 </style>
