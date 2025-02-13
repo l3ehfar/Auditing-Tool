@@ -59,7 +59,6 @@ export async function createHypothesis() {
     .select(['index'])
     .take(1)
     .toArray();
-  console.log('maxIndex', maxIndex);
 
   const index = maxIndex.length ? maxIndex[0].index + 1 : 1;
   const hp = await service.create({
@@ -71,49 +70,20 @@ export async function createHypothesis() {
 
   console.log('created hp', hp);
 
-  // New hypothesis starts with missingFields set to false (no red borders yet)
   const newCard = {
     ...hp,
     missingFields: {
-      description: false,
-      evidence: false,
+      description: true,
+      evidence: true,
     },
   };
 
   cards.set([...get(cards), newCard]);
 
-  // Persist missingFields in localStorage initially
   const missingFieldsMap = Object.fromEntries(
     get(cards).map((card) => [card.id, card.missingFields])
   );
   localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
-
-  const unsubscribeTimer = timeLeft.subscribe(($timeLeft) => {
-    if ($timeLeft === 60) {
-      console.log("Triggering missingFields update at 60 seconds for", newCard.id);
-
-      cards.update((currentCards) =>
-        currentCards.map((c) =>
-          c.id === newCard.id
-            ? {
-              ...c,
-              missingFields: {
-                description: !c.description.trim(),
-                evidence: c.evidence.length === 0,
-              },
-            }
-            : c
-        )
-      );
-
-      const updatedMissingFieldsMap = Object.fromEntries(
-        get(cards).map((card) => [card.id, card.missingFields])
-      );
-      localStorage.setItem('missingFields', JSON.stringify(updatedMissingFieldsMap));
-
-      unsubscribeTimer(); 
-    }
-  });
 }
 
 export async function updateHypothesis(id: Hypothesis['id'], changes: Partial<Hypothesis>) {
@@ -121,40 +91,32 @@ export async function updateHypothesis(id: Hypothesis['id'], changes: Partial<Hy
     const newHp = await service.patch(id, changes);
     console.log('updated hypothesis:', newHp);
 
-    let updatedHypothesis: HypothesisWithFields | null = null;
-    const $timeLeft = get(timeLeft); 
-
     cards.update((currentCards) => {
-      const updatedCards = currentCards.map((c) => {
+      return currentCards.map((c) => {
         if (c.id === id) {
-          updatedHypothesis = {
+          return {
+            ...c,
             ...newHp,
-            missingFields: $timeLeft <= 60
-              ? {
-                  description: !newHp.description.trim(),
-                  evidence: newHp.evidence.length === 0,
-                }
-              : c.missingFields, 
+            missingFields: {
+              description: !newHp.description.trim(),
+              evidence: newHp.evidence.length === 0,
+            },
           };
-          return updatedHypothesis;
         }
         return c;
       });
-
-      const missingFieldsMap = Object.fromEntries(
-        updatedCards.map((card) => [card.id, (card as HypothesisWithFields).missingFields])
-      );
-      localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
-
-      return updatedCards;
     });
 
-    return updatedHypothesis;
+    const missingFieldsMap = Object.fromEntries(
+      get(cards).map((card) => [card.id, card.missingFields])
+    );
+    localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
+
   } catch (error) {
     console.log('An error occurred while updating hypothesis', id);
-    return null;
   }
 }
+
 
 
 export async function removeHypothesis(id: Hypothesis['id']) {

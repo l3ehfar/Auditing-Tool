@@ -1,7 +1,7 @@
 import { writable, derived } from 'svelte/store';
 
 const TIMER_KEY = 'user_timer';
-const TIMER_DURATION = 180; 
+const TIMER_DURATION = 1800; 
 
 export const timeLeft = writable(getStoredTimeLeft());
 export const isTimerRunning = writable(false);

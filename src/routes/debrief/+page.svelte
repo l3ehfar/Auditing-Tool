@@ -5,7 +5,6 @@
   import { checkAndRedirect } from '$lib/redirections';
   import { pageProgress } from '$lib/marcelle/progress';
 
-
   export let data: { user: User | null };
 
   pageProgress.set(100);
@@ -14,8 +13,6 @@
     await checkAndRedirect(data.user, 'debrief');
     setProgress('debrief');
   });
-
-
 </script>
 
 <div class="mx-auto w-full max-w-3xl">
@@ -33,15 +30,18 @@
       <p>
         Your responses will be anonymized and used for research purposes to improve algorithm
         auditing methods. If you have any questions, would like to withdraw your data, or request a
-        summary of the research findings, please contact us at:
+        summary of the research findings, please contact us at: <strong>Jules Françoise</strong> –
+        <a href="mailto:jules.francoise@lisn.fr" class="text-blue-600 underline"
+          >jules.francoise@lisn.fr</a
+        >
       </p>
-      <ul class="list-disc list-inside mt-4">
-        <li>
+      <!-- <ul class="list-disc list-inside mt-4"> -->
+      <!-- <li>
           Jules Françoise – <a href="mailto:jules.francoise@lisn.fr" class="text-blue-600 underline"
             >jules.francoise@lisn.fr</a
           >
-        </li>
-        <li>
+        </li> -->
+      <!-- <li>
           Behnoosh Mohammadzadeh – <a
             href="mailto:behnoosh.mohammadzadeh@universite-paris-saclay.fr"
             class="text-blue-600 underline">behnoosh.mohammadzadeh@universite-paris-saclay.fr</a
@@ -58,14 +58,10 @@
             href="mailto:michele.gouiffes@universite-paris-saclay.fr"
             class="text-blue-600 underline">michele.gouiffes@universite-paris-saclay.fr</a
           >
-        </li>
-      </ul>
-
-      <p>
-        Once again, we appreciate your time and contribution!
-      </p>
+        </li> -->
+      <!-- </ul> -->
     </section>
-   
+    <section class="mt-6"><p>Once again, we appreciate your time and contribution!</p></section>
   </div>
 </div>
 

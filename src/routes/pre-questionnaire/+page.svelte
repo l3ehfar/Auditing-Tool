@@ -66,7 +66,7 @@
 
         <div class="form-control">
           <label class="label font-medium text-sm">
-            Indicate your field of study/profession:
+            Please select your area of study or profession.
           </label>
           <select
             name="understanding"

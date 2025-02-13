@@ -188,20 +188,20 @@
   }
 
   async function generateCaptionForCombinedImage() {
-    caption.$value.set('Caption is being generated...'); // Show temporary message
+    caption.$value.set('<em>Caption is being generated...</em>');
 
     const combinedImage = getCanvasImage();
     if (!combinedImage) {
-      caption.$value.set('Failed to capture image'); // Handle errors
+      caption.$value.set('Failed to capture image'); 
       console.error('Failed to capture canvas image');
       return;
     }
 
     try {
-      const newCaption = await generateCaption(combinedImage); // Generate caption
-      caption.$value.set(newCaption); // Update with actual caption
+      const newCaption = await generateCaption(combinedImage); 
+      caption.$value.set(newCaption); 
     } catch (error) {
-      caption.$value.set('Error generating caption'); // Error fallback
+      caption.$value.set('Error generating caption');
       console.error('Error generating caption:', error);
     }
   }
@@ -301,6 +301,7 @@
     border: none;
     cursor: grab;
   }
+
 
   /* .conf-row {
     display: flex;

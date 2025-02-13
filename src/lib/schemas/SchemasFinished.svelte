@@ -6,6 +6,8 @@
   import { pageProgress } from '$lib/marcelle/progress';
   import { cards, fetchCompletedHypotheses, updateHypothesis } from './hypothesis_storage';
   import { base } from '$app/paths';
+  import { faCheck } from '@fortawesome/free-solid-svg-icons';
+  import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
 
   let selectedCardIndex = writable<number | null>(null);
   let canSubmit = writable<boolean>(false);
@@ -44,7 +46,7 @@
   }
 
   function isCardCompleted(card) {
-    const requiredFields = ['question1', 'question2', 'question3']; 
+    const requiredFields = ['question1', 'question2', 'question3'];
 
     return requiredFields.every((field) => {
       return (
@@ -88,7 +90,9 @@
 
 <div class="flex h-screen">
   <div class="menu-container w-1/4 p-4 h-screen top-0 overflow-y-auto">
-    <h3 class="font-bold text-gray-600 mb-4">Please fill out all the questionnaires</h3>
+    <h3 class="font-bold text-gray-600 mb-4">
+      Please fill out all the questionnaires in each Bias Card
+    </h3>
     <ul class="menu bg-base-200 rounded-box">
       {#each $cards as card (card.index)}
         <li>
@@ -102,6 +106,9 @@
                 : 'bg-base-200'}
           >
             Bias {card.index}
+            {#if isCardCompleted(card)}
+              <FontAwesomeIcon icon={faCheck} class="text-green-500 ml-2" />
+            {/if}
           </a>
         </li>
       {/each}

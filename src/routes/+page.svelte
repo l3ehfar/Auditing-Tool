@@ -20,12 +20,12 @@
     success = false;
 
     console.log('Signup initiated:', { email, condition });
- 
+
     try {
       const res = await store.service('users').create({ prolificID, email, password, condition });
       console.log('Created user', res);
 
-      localStorage.setItem('user_timer', '180');
+      localStorage.setItem('user_timer', '1800');
 
       const user = await store.login(email, password);
       console.log('Signup successful:', user);
@@ -53,10 +53,14 @@
 
 <div class="max-w-3xl w-full bg-white mx-auto py-8">
   <section>
-    <h1 class="font-title text-center text-lg transition-all duration-200 md:text-5xl w-full">
-      Protocol Title
-    </h1>
-    <div class="my-6">Experiment description (2 lines)</div>
+    <h2 class="font-title text-center text-lg transition-all duration-200 md:text-2xl w-full">
+      Study Sensemaking in User-Driven Algorithm Auditing
+    </h2>
+    <div class="my-6">
+      You will participate in a study to audit an image captioning model, which generates textual
+      descriptions of images. The goal is to identify whether the captions display gender biases
+      when describing people in medical jobs.
+    </div>
   </section>
   <section>
     <h2 class="font-title text-center text-lg transition-all duration-200 md:text-2xl w-full">

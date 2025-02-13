@@ -49,7 +49,7 @@
 
   function notifyUserOfMissingFields() {
     const $timeLeft = get(timeLeft);
-    if ($timeLeft > 60) return; 
+    if ($timeLeft > 300) return; 
 
     cards.update((currentCards) => {
       const updatedCards = currentCards.map((card) => ({
@@ -75,11 +75,11 @@
     if (incompleteCards.length > 0) {
       notification({
         title: 'Missing Information',
-        message: 'For each card you should describe the bias and have at least one example.',
+        message: 'You have 10 minutes. For each card you should describe the bias and have at least one example.',
         type: 'danger',
         duration: 8000,
       });
-    }
+    } 
   }
 
   async function onDrop(event: DragEvent, card: Hypothesis) {
