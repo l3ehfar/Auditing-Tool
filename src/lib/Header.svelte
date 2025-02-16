@@ -3,6 +3,11 @@
   import { status } from './marcelle/logging';
   import { getPhase, pageProgress, PHASES } from './marcelle/progress';
   import { formattedTime, timeProgress } from './marcelle/timer';
+  import { goto } from '$app/navigation';
+
+  function helpPage() {
+    window.open(`${base}/video-tutorial`, '_blank');
+  }
 </script>
 
 <div class="navbar bg-base-100 text-sm min-h-0 sticky top-0 z-50 shadow-md">
@@ -19,7 +24,7 @@
   </div>
   <div class="flex-none flex items-center mx-4 gap-4">
     {#if getPhase($status.page).timeBased}
-      <button class="btn btn-xs btn-primary">help</button>
+      <button class="btn btn-xs btn-primary" on:click={helpPage}>help</button>
       <div class="flex flex-col items-center">
         <span>Timer: {$formattedTime}</span>
         <progress class="progress w-40" value={$timeProgress} max="100"></progress>

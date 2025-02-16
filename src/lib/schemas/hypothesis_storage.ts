@@ -1,7 +1,6 @@
 import { store } from '$lib/marcelle';
 import { type ObjectId } from '@marcellejs/core';
 import { get, writable } from 'svelte/store';
-import { timeLeft } from '$lib/marcelle/timer';
 
 export interface Hypothesis {
   id: ObjectId;
@@ -89,34 +88,40 @@ export async function createHypothesis() {
 export async function updateHypothesis(id: Hypothesis['id'], changes: Partial<Hypothesis>) {
   try {
     const newHp = await service.patch(id, changes);
-    console.log('updated hypothesis:', newHp);
+    console.log('Updated hypothesis:', newHp);
 
-    cards.update((currentCards) => {
-      return currentCards.map((c) => {
-        if (c.id === id) {
-          return {
-            ...c,
-            ...newHp,
-            missingFields: {
-              description: !newHp.description.trim(),
-              evidence: newHp.evidence.length === 0,
-            },
-          };
-        }
-        return c;
-      });
-    });
+    if (!newHp) {
+      throw new Error(`updateHypothesis failed: No valid response for ID ${id}`);
+    }
+
+    cards.update((currentCards) =>
+      currentCards.map((c) =>
+        c.id === id
+          ? {
+              ...c,
+              ...newHp,
+              missingFields: {
+                description: !newHp.description.trim(),
+                evidence: newHp.evidence.length === 0,
+              },
+            }
+          : c
+      )
+    );
 
     const missingFieldsMap = Object.fromEntries(
       get(cards).map((card) => [card.id, card.missingFields])
     );
     localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
 
+    console.log(`Returning updated hypothesis for ID ${id}:`, newHp);
+    return newHp; 
+
   } catch (error) {
-    console.log('An error occurred while updating hypothesis', id);
+    console.error(`An error occurred while updating hypothesis ${id}:`, error);
+    return null; 
   }
 }
-
 
 
 export async function removeHypothesis(id: Hypothesis['id']) {
@@ -144,44 +149,25 @@ export async function addEvidence(id: Hypothesis['id'], src: string, caption: st
   if (!current) {
     throw new Error(`Hypothesis ${id} does not exist.`);
   }
-  let exists = false;
-  const evidence = current.evidence.map((x) => {
-    if (x.src === src) {
-      exists = true;
-      return { ...x, caption };
-    }
-    return x;
-  });
-  if (!exists) {
-    evidence.push({ id: crypto.randomUUID(), src, caption });
-  }
-  console.log('evidence', evidence);
-  return updateHypothesis(id, { evidence }).then((updatedCard) => {
-    if (!updatedCard) return;
 
-    const $timeLeft = get(timeLeft);
-    console.log("Time Left during addEvidence:", $timeLeft);
+  const newEvidence = [...current.evidence, { id: crypto.randomUUID(), src, caption }];
+  console.log("Updated evidence before patch:", newEvidence);
+
+  return updateHypothesis(id, { evidence: newEvidence }).then((updatedCard) => {
+    if (!updatedCard) {
+      console.error(`Failed to update hypothesis ${id}. The returned object is undefined or null.`);
+      return;
+    }
+
+    console.log("Evidence successfully added. Updated evidence list:", updatedCard.evidence.map(e => e.id));
 
     cards.update((currentCards) =>
-      currentCards.map((c) =>
-        c.id === id
-          ? {
-              ...c,
-              missingFields: $timeLeft <= 60
-                ? {
-                    ...c.missingFields,
-                    evidence: updatedCard.evidence.length === 0,
-                  }
-                : c.missingFields,
-            }
-          : c
-      )
+      currentCards.map((c) => (c.id === id ? { ...c, evidence: updatedCard.evidence } : c))
     );
 
-    const missingFieldsMap = Object.fromEntries(
-      get(cards).map((card) => [card.id, card.missingFields])
-    );
-    localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
+    return updatedCard;
+  }).catch((error) => {
+    console.error(`Error in addEvidence when updating hypothesis ${id}:`, error);
   });
 }
 

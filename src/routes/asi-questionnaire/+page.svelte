@@ -123,7 +123,7 @@
     });
 
     asiQ.submit().then(() => {
-      goto(`${base}/main`);
+      goto(`${base}/video-tutorial`);
     });
   }
 </script>

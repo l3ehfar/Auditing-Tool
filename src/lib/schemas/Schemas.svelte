@@ -32,11 +32,19 @@
     });
 
     let timerTriggered = false;
+    let timerReminder = false;
 
     const unsubscribeTimer = timeLeft.subscribe(($timeLeft) => {
-      if ($timeLeft === 60 && !timerTriggered) {
-        timerTriggered = true; 
+      if ($timeLeft === 600 && !timerTriggered) {
+        timerTriggered = true;
         notifyUserOfMissingFields();
+      }
+    });
+
+    const unsubscribeReminder = timeLeft.subscribe(($timeLeft) => {
+      if ($timeLeft === 300 && !timerReminder) {
+        timerTriggered = true;
+        notifyFiveMinutesLeft();
       }
     });
 
@@ -44,12 +52,21 @@
       stopActivityTracking();
       unsubscribeTimer();
       unsubscribe();
+      unsubscribeReminder();
     };
   });
 
+  function notifyFiveMinutesLeft() {
+    notification({
+      title: 'Time Reminder',
+      message: 'Only 5 minutes remaining!',
+      duration: 8000,
+    });
+  }
+
   function notifyUserOfMissingFields() {
     const $timeLeft = get(timeLeft);
-    if ($timeLeft > 300) return; 
+    if ($timeLeft > 600) return;
 
     cards.update((currentCards) => {
       const updatedCards = currentCards.map((card) => ({
@@ -75,11 +92,18 @@
     if (incompleteCards.length > 0) {
       notification({
         title: 'Missing Information',
-        message: 'You have 10 minutes. For each card you should describe the bias and have at least one example.',
+        message:
+          'You have 10 minutes. For each card you should describe the bias and have at least one example.',
         type: 'danger',
         duration: 8000,
       });
-    } 
+    } else {
+      notification({
+        title: 'Time Reminder',
+        message: 'Only 10 minutes remaining!',
+        duration: 5000,
+      });
+    }
   }
 
   async function onDrop(event: DragEvent, card: Hypothesis) {
@@ -187,7 +211,7 @@
             on:drop={(event) => onDrop(event, card)}
             on:dragover={(event) => allowDrop(event)}
           >
-            {#each card.evidence as item (item.id)}
+            {#each card.evidence as item (item.id || Math.random())}
               <div
                 class="dropped-item p-1 bg-gray-100 border border-gray-300 rounded-md text-center relative"
                 draggable={true}
