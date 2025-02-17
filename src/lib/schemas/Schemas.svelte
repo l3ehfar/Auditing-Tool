@@ -119,14 +119,49 @@
 
     try {
       const data = JSON.parse(rawData);
-      console.log('data', data);
-      const newCard = await addEvidence(card.id, data.src, data.caption);
-      console.log('newCard', newCard);
+      console.log('Dropped data:', data);
 
-      // cards.update((currentCards) => currentCards.map((c) => (c.id === card.id ? newCard : c)));
+      const thumbnail = await generateThumbnailOnDrop(data.src);
+
+      const newCard = await addEvidence(card.id, thumbnail, data.caption);
+      console.log('Updated card with new evidence:', newCard);
     } catch (error) {
       console.error('Failed to parse drag data:', error);
     }
+  }
+
+  async function generateThumbnailOnDrop(
+    imageSrc: string,
+    width: number = 100,
+    height: number = 100,
+  ): Promise<string> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = imageSrc;
+      img.crossOrigin = 'anonymous';
+
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          console.error('Canvas context not available');
+          resolve(imageSrc);
+          return;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+
+        resolve(canvas.toDataURL('image/png'));
+      };
+
+      img.onerror = () => {
+        console.error('Error loading image for thumbnail.');
+        resolve(imageSrc);
+      };
+    });
   }
 
   function allowDrop(event) {
@@ -238,7 +273,7 @@
                     />
                   </svg>
                 </button>
-                <img src={item.src} class="w-full h-auto mb-2 rounded" />
+                <img src={item.thumbnail} class="w-full h-auto mb-2 rounded" />
                 <h3 class="text-xs text-gray-600">{item.caption}</h3>
               </div>
             {/each}

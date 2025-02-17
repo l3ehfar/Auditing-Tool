@@ -37,7 +37,6 @@ export interface ImageInstance extends Instance {
 }
 
 // fetch dataset and captions
-
 export async function fetchDatasetFromGitHub() {
   try {
     const response = await fetch('https://raw.githubusercontent.com/l3ehfar/UserStudyDataset/main/captions.json');
@@ -339,3 +338,5 @@ input.$images.subscribe(async (image) => {
 
 export const ImageDisplay = imageDisplay($imageStream);
 
+
+// fetchDatasetFromGitHub();

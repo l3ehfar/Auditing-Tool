@@ -242,7 +242,7 @@
                   <div
                     class="dropped-item p-1 bg-gray-100 border border-gray-300 rounded-md text-center relative"
                   >
-                    <img src={item.src} class="w-full h-auto mb-2 rounded" />
+                    <img src={item.thumbnail} class="w-full h-auto mb-2 rounded" />
                     <h3 class="text-xs text-gray-600">{item.caption}</h3>
                   </div>
                 {/each}

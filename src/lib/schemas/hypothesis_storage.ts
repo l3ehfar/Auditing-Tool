@@ -139,27 +139,27 @@ export async function removeHypothesis(id: Hypothesis['id']) {
       return updatedCards;
     });
 
-  } catch (error) {
+  } catch (error) { 
     console.log('An error occurred while removing hypothesis', id);
   }
 }
 
-export async function addEvidence(id: Hypothesis['id'], src: string, caption: string) {
+export async function addEvidence(id: Hypothesis['id'], thumbnail: string, caption: string) {
   const current = await service.get(id);
   if (!current) {
     throw new Error(`Hypothesis ${id} does not exist.`);
   }
 
-  const newEvidence = [...current.evidence, { id: crypto.randomUUID(), src, caption }];
-  console.log("Updated evidence before patch:", newEvidence);
+  const newEvidence = [...current.evidence, { id: crypto.randomUUID(), thumbnail, caption }];
+  // console.log("Updated evidence before patch:", newEvidence);
 
   return updateHypothesis(id, { evidence: newEvidence }).then((updatedCard) => {
     if (!updatedCard) {
-      console.error(`Failed to update hypothesis ${id}. The returned object is undefined or null.`);
+      console.error(`Failed to update hypothesis ${id}.`);
       return;
     }
 
-    console.log("Evidence successfully added. Updated evidence list:", updatedCard.evidence.map(e => e.id));
+    // console.log("Evidence successfully added. Updated evidence list:", updatedCard.evidence.map(e => e.id));
 
     cards.update((currentCards) =>
       currentCards.map((c) => (c.id === id ? { ...c, evidence: updatedCard.evidence } : c))
