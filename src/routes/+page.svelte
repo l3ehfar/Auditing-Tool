@@ -3,6 +3,7 @@
   import { store, type User } from '$lib/marcelle/store';
   import { goto } from '$app/navigation';
   import { base } from '$app/paths';
+  import { fetchDatasetFromGitHub } from '$lib/marcelle';
 
   export let data: { user: User | null };
 

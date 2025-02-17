@@ -3,7 +3,6 @@
   import { status } from './marcelle/logging';
   import { getPhase, pageProgress, PHASES } from './marcelle/progress';
   import { formattedTime, timeProgress } from './marcelle/timer';
-  import { goto } from '$app/navigation';
 
   function helpPage() {
     window.open(`${base}/video-tutorial`, '_blank');

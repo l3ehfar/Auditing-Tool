@@ -36,17 +36,68 @@ export interface ImageInstance extends Instance {
   public: boolean;
 }
 
+// fetch dataset and captions
+
+export async function fetchDatasetFromGitHub() {
+  try {
+    const response = await fetch('https://raw.githubusercontent.com/l3ehfar/UserStudyDataset/main/captions.json');
+    const captionsData = await response.json();
+
+    for (const [imageName, data] of Object.entries(captionsData)) {
+      const { caption, image_url } = data;
+
+      const imageData = await fetchImageAsImageData(image_url);
+      const processedImage = await cropAndResizeImage(imageData);
+
+      const instance: ImageInstance = {
+        x: processedImage,
+        y: 'Images', 
+        thumbnail: image_url,
+        caption: caption,
+        public: true,
+      };
+
+      const createdInstance = await trainingSet.create(instance);
+
+      if (createdInstance && (createdInstance._id || createdInstance.id)) {
+        console.log(`Uploaded: ${imageName}`);
+      } else {
+        console.error(`Failed to create instance for: ${imageName}`);
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching dataset:', error);
+  }
+}
+
+async function fetchImageAsImageData(imageUrl: string): Promise<ImageData> {
+  const response = await fetch(imageUrl);
+  const blob = await response.blob();
+  const bitmap = await createImageBitmap(blob);
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) throw new Error('Canvas rendering context not available');
+
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  ctx.drawImage(bitmap, 0, 0);
+
+  return ctx.getImageData(0, 0, canvas.width, canvas.height);
+}
+
 const HFmodel = huggingfaceModel({
   task: 'image-to-text',
   apiToken: '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',
   inference: 'api',
 });
 
+
 export const caption = text('model generated caption:');
 export const input = imageUpload();
 export const label = textInput();
 
-// List of words to remove from captions
 const unwantedWords = [
   'araffe',
   'arafed',
@@ -59,7 +110,7 @@ const unwantedWords = [
   'arraffed',
 ];
 
-// Function to clean captions and replace unwanted words with "a "
+
 function cleanCaption(caption: string): string {
   const regex = new RegExp(`\\b(${unwantedWords.join('|')})\\b`, 'gi');
   const cleanedCaption = caption.replace(regex, 'a ').replace(/\s+/g, ' ').trim();
@@ -287,3 +338,4 @@ input.$images.subscribe(async (image) => {
 });
 
 export const ImageDisplay = imageDisplay($imageStream);
+

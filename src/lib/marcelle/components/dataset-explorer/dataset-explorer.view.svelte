@@ -311,6 +311,7 @@ function selectInstance(id?: ObjectId) {
                 <img
                   src={thumbnail}
                   alt="thumbnail"
+                  style="width: 60px; height: 60px;"
                   class="m-1"
                   class:selected={$selected.includes(id)}
                   class:highlighted={highlighted.includes(id)} 

@@ -43,7 +43,7 @@
 
     const unsubscribeReminder = timeLeft.subscribe(($timeLeft) => {
       if ($timeLeft === 300 && !timerReminder) {
-        timerTriggered = true;
+        timerReminder = true;
         notifyFiveMinutesLeft();
       }
     });
