@@ -8,7 +8,7 @@ export const PHASES = [
     pages: ['pre-questionnaire', 'asi-questionnaire'],
     timeBased: false,
   },
-  { title: 'training', pages: ['video-tutorial'], timeBased: false },
+  { title: 'training', pages: ['video-tutorial', 'tutorial'], timeBased: false },
   { title: 'auditing', pages: ['main'], timeBased: true },
   { title: 'post-questionnaires', pages: ['hypotheses-questionnaire', 'post-questionnaire'], timeBased: false },
   {title: 'end', pages: ['debrief'], timeBased: false },

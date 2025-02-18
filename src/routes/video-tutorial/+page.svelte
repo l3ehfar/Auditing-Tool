@@ -17,7 +17,7 @@
 
   const userCondition = data.user?.condition || 'conditionOne';
   const videoUrl = VIDEO_URLS[userCondition];
-
+ 
   function onYouTubeIframeAPIReady() {
     player = new YT.Player('youtube-player');
   }
@@ -25,6 +25,7 @@
   onMount(async () => {
    
     setProgress('video-tutorial');
+    
 
     if (typeof window !== 'undefined') {
       const script = document.createElement('script');
@@ -36,7 +37,7 @@
   });
 
   function submit() {
-    goto(`${base}/main`);
+    goto(`${base}/tutorial`);
   }
 </script>
 
@@ -68,14 +69,13 @@
   .video-wrapper {
     position: relative;
     width: 100%;
-    height: 90vh; /* 90% of viewport height */
+    height: 90vh; 
     display: flex;
     justify-content: center;
     align-items: center;
-    background: black; /* Ensure no white gaps */
+    background: black; 
   }
 
-  /* Make the iframe fully responsive */
   .video-wrapper iframe {
     position: absolute;
     width: 100%;

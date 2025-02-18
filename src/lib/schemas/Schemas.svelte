@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { writable, get } from 'svelte/store';
+  import { writable, get, derived } from 'svelte/store';
   import { onMount } from 'svelte';
   import { notification } from '@marcellejs/core';
   import { goto } from '$app/navigation';
@@ -17,9 +17,13 @@
   } from './hypothesis_storage';
   import { isTimerFinished, timeLeft } from '$lib/marcelle/timer';
   import { base } from '$app/paths';
+  import { page } from '$app/stores';
+
+  const isTutorial = derived(page, ($page) => $page.url.pathname.includes('/tutorial'));
 
   onMount(() => {
-    fetchHypotheses();
+    const tutorialMode = get(isTutorial);
+    fetchHypotheses(tutorialMode);
     startActivityTracking();
 
     const unsubscribe = isTimerFinished.subscribe((finished) => {
@@ -121,8 +125,11 @@
       const data = JSON.parse(rawData);
       console.log('Dropped data:', data);
 
-      const thumbnail = await generateThumbnailOnDrop(data.src);
+      let thumbnail = data.thumbnail || null;
 
+      if (!thumbnail) {
+        thumbnail = await generateThumbnailOnDrop(data.src);
+      }
       const newCard = await addEvidence(card.id, thumbnail, data.caption);
       console.log('Updated card with new evidence:', newCard);
     } catch (error) {
@@ -239,7 +246,7 @@
           />
           <h4 class="text-xs text-gray-500 font-medium">drag and drop Supporting Examples:</h4>
           <div
-            class="grid grid-cols-5 gap-2 p-4 border border-dashed rounded-lg min-h-[100px] {card
+            class="grid grid-cols-5 gap-2 p-4 border border-dashed evidence-area rounded-lg min-h-[100px] {card
               .missingFields?.evidence
               ? 'border-red-500 border-2'
               : 'border-gray-300'}"
@@ -282,7 +289,11 @@
       </div>
     {/each}
     <div class="text-center">
-      <button class="btn btn-sm btn-primary" on:click={createHypothesis}>Document New Bias</button>
+      <button
+        class="btn btn-sm btn-primary document-bias"
+        on:click={() => createHypothesis($isTutorial)}
+        disabled={$isTutorial && $cards.length >= 1}>Document New Bias</button
+      >
     </div>
   </div>
 </div>

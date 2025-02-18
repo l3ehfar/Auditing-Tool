@@ -23,10 +23,10 @@
 
   function onDragStart(event: DragEvent) {
     const canvasElement = document.querySelector('#fabric-canvas') as HTMLCanvasElement;
-    const currentCaption = caption.$value.get(); // Get the current caption
+    const currentCaption = caption.$value.get(); 
 
     if (canvasElement) {
-      const canvasUrl = canvasElement.toDataURL('image/png'); // Convert the canvas to an image URL (base64)
+      const canvasUrl = canvasElement.toDataURL('image/png'); 
       const data = JSON.stringify({
         type: 'image-caption',
         src: canvasUrl,
@@ -72,7 +72,6 @@
 
   function loadImageToCanvas(img: ImageData) {
     if (canvas) {
-      // Clear the canvas before loading a new image
       canvas.clear();
 
       const tempCanvas = document.createElement('canvas');

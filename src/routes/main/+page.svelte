@@ -17,11 +17,14 @@
   });
 </script>
 
+
+
 <div class="grid h-screen w-screen grid-cols-layout gap-2 p-2">
   <div class="flex flex-col h-full p-2 bg-white shadow rounded-lg">
     <div class="text-center">
       <h2 class="text-xl my-2">Dataset Explorer</h2>
     </div>
+
     {#if data.user?.condition === 'conditionThree'}
       <div class="cond3">
         <KeywordFilter />
@@ -88,4 +91,5 @@
     align-items: flex-start;
     padding: 0;
   }
+
 </style>

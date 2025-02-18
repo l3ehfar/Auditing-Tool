@@ -32,7 +32,7 @@
 </script>
 
 <div class="content">
-  <div class="marcelle card">
+  <div class="dataset marcelle card">
     <!-- <div class="conf-row dataset-tools">
 
       <div class="timer-display">
@@ -49,7 +49,9 @@
      
       </div>
     </div> -->
+    <div class="dataset-tutorial">
     <div use:marcelle={datasetExplorerComponent} class="dataset" />
+    </div>
   </div>
  
 </div>

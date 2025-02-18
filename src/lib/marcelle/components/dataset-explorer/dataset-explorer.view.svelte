@@ -6,13 +6,12 @@
   import { scale } from 'svelte/transition';
   import { ViewContainer } from '@marcellejs/design-system';
   import { Button, PopMenu } from '@marcellejs/design-system';
-  import { highlightedInstances } from "$lib/store";
-
+  import { highlightedInstances } from '$lib/store';
 
   let highlighted = [];
-  highlightedInstances.subscribe(value => {
+  highlightedInstances.subscribe((value) => {
     highlighted = value;
-    // console.log('Highlighted instances:', highlighted); 
+    // console.log('Highlighted instances:', highlighted);
   });
 
   export let title: string;
@@ -84,7 +83,6 @@
     loading = false;
   }
 
-
   function getLabel(id: ObjectId) {
     for (const [label, { instances }] of Object.entries(classes)) {
       if (instances.map((x) => x.id).includes(id)) {
@@ -135,34 +133,33 @@
 
   let initialId: ObjectId = null;
 
-function selectInstance(id?: ObjectId) {
-  if (metaPressed) {
-    if (!id) return;
-    // Toggle selection if Meta/Control key is pressed
-    if (selected.get().includes(id)) {
-      selected.set(selected.get().filter((x) => x !== id));
+  function selectInstance(id?: ObjectId) {
+    if (metaPressed) {
+      if (!id) return;
+      // Toggle selection if Meta/Control key is pressed
+      if (selected.get().includes(id)) {
+        selected.set(selected.get().filter((x) => x !== id));
+      } else {
+        selected.set([...selected.get(), id]);
+      }
+    } else if (shiftPressed) {
+      if (!initialId || !id) return;
+      const srcLabel = getLabel(initialId);
+      const dstLabel = getLabel(id);
+      if (srcLabel !== dstLabel) return;
+      const instances = classes[srcLabel].instances.map((x) => x.id);
+      const srcIndex = instances.indexOf(initialId);
+      const dstIndex = instances.indexOf(id);
+      const newSelection = instances.slice(
+        Math.min(srcIndex, dstIndex),
+        Math.max(srcIndex, dstIndex) + 1,
+      );
+      selected.set([...new Set([...selected.get(), ...newSelection])]);
     } else {
-      selected.set([...selected.get(), id]);
+      selected.set(id ? [id] : []);
+      initialId = id;
     }
-  } else if (shiftPressed) {
-    if (!initialId || !id) return;
-    const srcLabel = getLabel(initialId);
-    const dstLabel = getLabel(id);
-    if (srcLabel !== dstLabel) return;
-    const instances = classes[srcLabel].instances.map((x) => x.id);
-    const srcIndex = instances.indexOf(initialId);
-    const dstIndex = instances.indexOf(id);
-    const newSelection = instances.slice(
-      Math.min(srcIndex, dstIndex),
-      Math.max(srcIndex, dstIndex) + 1
-    );
-    selected.set([...new Set([...selected.get(), ...newSelection])]);
-  } else {
-    selected.set(id ? [id] : []);
-    initialId = id;
   }
-}
-
 
   function onClassAction(label: string, code: string) {
     let result: string;
@@ -260,7 +257,6 @@ function selectInstance(id?: ObjectId) {
       }
     });
   });
-
 </script>
 
 <svelte:window on:keydown={handleKeydown} on:keyup={handleKeyup} />
@@ -304,24 +300,24 @@ function selectInstance(id?: ObjectId) {
                 on:select={(e) => onClassAction(label, e.detail)}
               />
             </div>
-
-            <div class="browser-class-body">
-              {#each instances as { id, thumbnail } (id)}
-                <!-- svelte-ignore a11y-click-events-have-key-events -->
-                <img
-                  src={thumbnail}
-                  alt="thumbnail"
-                  style="width: 60px; height: 60px;"
-                  class="m-1"
-                  class:selected={$selected.includes(id)}
-                  class:highlighted={highlighted.includes(id)} 
-                  in:scale
-                  out:scale
-                  class:small-thumbnail={zoomLevel === 1}
-                  class:large-thumbnail={zoomLevel === 2}
-                  on:click|stopPropagation={() => selectInstance(id)}
-                />
-              {/each}
+            
+              <div class="browser-class-body">
+                {#each instances as { id, thumbnail } (id)}
+                  <!-- svelte-ignore a11y-click-events-have-key-events -->
+                  <img
+                    src={thumbnail}
+                    alt="thumbnail"
+                    style="width: 60px; height: 60px;"
+                    class="m-1"
+                    class:selected={$selected.includes(id)}
+                    class:highlighted={highlighted.includes(id)}
+                    in:scale
+                    out:scale
+                    class:small-thumbnail={zoomLevel === 1}
+                    class:large-thumbnail={zoomLevel === 2}
+                    on:click|stopPropagation={() => selectInstance(id)}
+                  />
+                {/each}
             </div>
           </div>
           <div class="pb-1">
@@ -389,14 +385,14 @@ function selectInstance(id?: ObjectId) {
   }
 
   .browser-class-body img.highlighted {
-    border-color: palegreen; 
+    border-color: palegreen;
     border-width: 4px;
   }
 
   .small-thumbnail {
     width: 60px;
   }
-  
+
   .large-thumbnail {
     width: 120px;
   }

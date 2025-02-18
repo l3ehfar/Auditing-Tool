@@ -1,12 +1,14 @@
 import { store } from '$lib/marcelle';
 import { type ObjectId } from '@marcellejs/core';
-import { get, writable } from 'svelte/store';
+import { get, writable, derived } from 'svelte/store';
+
 
 export interface Hypothesis {
   id: ObjectId;
   index: number;
   description: string;
   evidence: any[];
+  isTutorial?: boolean;
   missingFields?: {
     description: boolean;
     evidence: boolean;
@@ -23,10 +25,14 @@ export interface Hypothesis {
 export const cards = writable<Hypothesis[]>([]);
 const service = store.service<Hypothesis>('hypotheses');
 
-export async function fetchHypotheses() {
-  const hp = await service.items().query({ $sort: { index: 1 } }).toArray();
+export async function fetchHypotheses(isTutorial: boolean = false) {
+  const allHypotheses = await service.items().query({ $sort: { index: 1 } }).toArray();
 
-  const updatedHypotheses = hp.map((hypothesis) => ({
+  const filteredHypotheses = isTutorial
+    ? allHypotheses
+    : allHypotheses.filter((hypothesis) => !hypothesis.isTutorial);
+
+  const updatedHypotheses = filteredHypotheses.map((hypothesis) => ({
     ...hypothesis,
     evidence: hypothesis.evidence ?? [],
     questionnaire: {
@@ -48,10 +54,11 @@ export async function fetchHypotheses() {
   }));
 
   cards.set(hypothesesWithMissingFields);
-
 }
 
-export async function createHypothesis() {
+
+
+export async function createHypothesis(isTutorial: boolean = false) {
   const maxIndex = await service
     .items()
     .query({ $sort: { index: -1 } })
@@ -60,17 +67,21 @@ export async function createHypothesis() {
     .toArray();
 
   const index = maxIndex.length ? maxIndex[0].index + 1 : 1;
+
+
   const hp = await service.create({
     index,
     description: '',
     evidence: [],
-    questionnaire: { question1: '', question2: '', question3: '', comments: '' }
+    questionnaire: { question1: '', question2: '', question3: '', comments: '' },
+    isTutorial
   });
 
   console.log('created hp', hp);
 
-  const newCard = {
+  const newCard: Hypothesis = {
     ...hp,
+    isTutorial,
     missingFields: {
       description: true,
       evidence: true,
@@ -98,13 +109,13 @@ export async function updateHypothesis(id: Hypothesis['id'], changes: Partial<Hy
       currentCards.map((c) =>
         c.id === id
           ? {
-              ...c,
-              ...newHp,
-              missingFields: {
-                description: !newHp.description.trim(),
-                evidence: newHp.evidence.length === 0,
-              },
-            }
+            ...c,
+            ...newHp,
+            missingFields: {
+              description: !newHp.description.trim(),
+              evidence: newHp.evidence.length === 0,
+            },
+          }
           : c
       )
     );
@@ -115,11 +126,11 @@ export async function updateHypothesis(id: Hypothesis['id'], changes: Partial<Hy
     localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
 
     console.log(`Returning updated hypothesis for ID ${id}:`, newHp);
-    return newHp; 
+    return newHp;
 
   } catch (error) {
     console.error(`An error occurred while updating hypothesis ${id}:`, error);
-    return null; 
+    return null;
   }
 }
 
@@ -139,7 +150,7 @@ export async function removeHypothesis(id: Hypothesis['id']) {
       return updatedCards;
     });
 
-  } catch (error) { 
+  } catch (error) {
     console.log('An error occurred while removing hypothesis', id);
   }
 }
@@ -185,12 +196,12 @@ export async function removeEvidence(hypothesis: Hypothesis, evidenceId: string)
       currentCards.map((c) =>
         c.id === hypothesis.id
           ? {
-              ...c,
-              missingFields: {
-                ...c.missingFields,
-                evidence: updatedCard.evidence.length === 0, 
-              },
-            }
+            ...c,
+            missingFields: {
+              ...c.missingFields,
+              evidence: updatedCard.evidence.length === 0,
+            },
+          }
           : c
       )
     );
