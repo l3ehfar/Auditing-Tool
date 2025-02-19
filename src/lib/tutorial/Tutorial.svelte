@@ -57,7 +57,7 @@
 
     tour.addStep({
       id: 'start-tutorial',
-      text: 'Now we will do a step by step tutorial to get familiar with the interface.',
+      text: 'Welcome to the tutorial! We will guide you through each part of the interface. Click "Next" to begin.',
       buttons: [{ text: 'Next', action: tour.next }],
     });
 
@@ -99,14 +99,14 @@
 
     tour.addStep({
       id: 'view-caption',
-      text: 'The image and its caption is displayed here.',
+      text: 'Here, you can view the selected image along with its caption.',
       attachTo: { element: '.instax-style', on: 'bottom' },
       buttons: [{ text: 'Next', action: tour.next }],
     });
 
     tour.addStep({
       id: 'new-bias',
-      text: 'Click here to document a new bias.',
+      text: 'To document a new bias, click this button. It will allow you to provide details about the observed bias.',
       attachTo: { element: '.document-bias', on: 'left' },
       buttons: [],
       when: {
@@ -124,7 +124,7 @@
 
     tour.addStep({
       id: 'drag-item',
-      text: 'You can drag an image and its caption from here.',
+      text: 'Drag an image and its caption from here and drop it in the bias card.',
       attachTo: { element: '.instax-style', on: 'bottom' },
       buttons: [],
       when: {
@@ -142,7 +142,7 @@
 
     tour.addStep({
       id: 'drop-item',
-      text: 'And drop it in this area.',
+      text: 'Drop it in this area.',
       attachTo: { element: '.evidence-area', on: 'bottom' },
       buttons: [],
       when: {
@@ -160,12 +160,12 @@
 
     tour.addStep({
       id: 'repeat-step',
-      text: 'Repeat the process for all images. Drop at least 5 items here.',
+      text: 'Repeat the process for at least 5 different images. Drop each image into this area to continue.',
       attachTo: { element: '.evidence-area', on: 'bottom' },
       buttons: [],
       when: {
         show: () => {
-          let dropCounter = 0;
+          let dropCounter = 0; 
 
           const evidenceArea = document.querySelector('.evidence-area');
           if (!evidenceArea) return;
@@ -185,6 +185,7 @@
           tour.currentStep.options.dropHandler = dropHandler;
         },
         hide: () => {
+
           const evidenceArea = document.querySelector('.evidence-area');
           if (evidenceArea && tour.currentStep.options.dropHandler) {
             evidenceArea.removeEventListener('drop', tour.currentStep.options.dropHandler);
@@ -196,14 +197,14 @@
 
     tour.addStep({
       id: 'write-description',
-      text: 'Write a description in the text area.',
+      text: 'Write a description in the text area. This helps in documenting your observation comprehensively.',
       attachTo: { element: 'textarea', on: 'bottom' },
       buttons: [{ text: 'Next', action: tour.next }],
     });
 
     tour.addStep({
       id: 'finish',
-      text: 'You have completed the tutorial!',
+      text: 'You have completed the tutorial! You can restart the tutorial or proceed to the main task.',
       buttons: [
         {
           action: restartTutorial,
