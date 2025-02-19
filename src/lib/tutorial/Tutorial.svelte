@@ -56,10 +56,45 @@
     });
 
     tour.addStep({
-      id: 'select-dataset',
-      text: 'This is the dataset explorer. Click on any image.',
-      attachTo: { element: '.dataset-tutorial', on: 'bottom' },
+      id: 'start-tutorial',
+      text: 'Now we will do a step by step tutorial to get familiar with the interface.',
       buttons: [{ text: 'Next', action: tour.next }],
+    });
+
+    tour.addStep({
+      id: 'select-dataset',
+      text: 'This is the dataset explorer. Click on any image to continue.',
+      attachTo: { element: '.dataset-tutorial', on: 'bottom' },
+      buttons: [],
+      when: {
+        show: () => {
+          const images = document.querySelectorAll('.dataset-tutorial img');
+
+          const handlers = [];
+
+          images.forEach((img) => {
+            const clickHandler = () => {
+              tour.next();
+
+              img.removeEventListener('click', clickHandler);
+            };
+
+            img.addEventListener('click', clickHandler, { once: true });
+
+            handlers.push({ img, clickHandler });
+          });
+
+          tour.currentStep.options.handlers = handlers;
+        },
+        hide: () => {
+          const handlers = tour.currentStep.options.handlers || [];
+          handlers.forEach(({ img, clickHandler }) => {
+            img.removeEventListener('click', clickHandler);
+          });
+
+          tour.currentStep.options.handlers = [];
+        },
+      },
     });
 
     tour.addStep({
@@ -125,9 +160,38 @@
 
     tour.addStep({
       id: 'repeat-step',
-      text: 'Repeat the process for all images.',
-      attachTo: { element: '.dataset-tutorial', on: 'bottom' },
-      buttons: [{ text: 'Next', action: tour.next }],
+      text: 'Repeat the process for all images. Drop at least 5 items here.',
+      attachTo: { element: '.evidence-area', on: 'bottom' },
+      buttons: [],
+      when: {
+        show: () => {
+          let dropCounter = 0;
+
+          const evidenceArea = document.querySelector('.evidence-area');
+          if (!evidenceArea) return;
+
+          const dropHandler = (event) => {
+            dropCounter++;
+            console.log('Items dropped:', dropCounter);
+            if (dropCounter >= 4) {
+              tour.next();
+
+              evidenceArea.removeEventListener('drop', dropHandler);
+            }
+          };
+
+          evidenceArea.addEventListener('drop', dropHandler);
+
+          tour.currentStep.options.dropHandler = dropHandler;
+        },
+        hide: () => {
+          const evidenceArea = document.querySelector('.evidence-area');
+          if (evidenceArea && tour.currentStep.options.dropHandler) {
+            evidenceArea.removeEventListener('drop', tour.currentStep.options.dropHandler);
+            tour.currentStep.options.dropHandler = null;
+          }
+        },
+      },
     });
 
     tour.addStep({
@@ -140,7 +204,6 @@
     tour.addStep({
       id: 'finish',
       text: 'You have completed the tutorial!',
-      attachTo: { element: 'textarea', on: 'bottom' },
       buttons: [
         {
           action: restartTutorial,
