@@ -43,6 +43,11 @@ export async function fetchHypotheses(isTutorial: boolean = false) {
     },
   }));
 
+  if (isTutorial) {
+    cards.set(updatedHypotheses);
+    return;
+  }
+
   const storedMissingFields = JSON.parse(localStorage.getItem('missingFields') || '{}');
 
   const hypothesesWithMissingFields = updatedHypotheses.map((hypothesis) => ({
@@ -82,18 +87,19 @@ export async function createHypothesis(isTutorial: boolean = false) {
   const newCard: Hypothesis = {
     ...hp,
     isTutorial,
-    missingFields: {
+    missingFields: isTutorial ? undefined : {
       description: true,
       evidence: true,
     },
   };
 
   cards.set([...get(cards), newCard]);
-
-  const missingFieldsMap = Object.fromEntries(
-    get(cards).map((card) => [card.id, card.missingFields])
-  );
-  localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
+  if (!isTutorial) {
+    const missingFieldsMap = Object.fromEntries(
+      get(cards).map((card) => [card.id, card.missingFields])
+    );
+    localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
+  }
 }
 
 export async function updateHypothesis(id: Hypothesis['id'], changes: Partial<Hypothesis>) {
@@ -111,7 +117,7 @@ export async function updateHypothesis(id: Hypothesis['id'], changes: Partial<Hy
           ? {
             ...c,
             ...newHp,
-            missingFields: {
+            missingFields: c.isTutorial ? undefined : {
               description: !newHp.description.trim(),
               evidence: newHp.evidence.length === 0,
             },
@@ -120,10 +126,12 @@ export async function updateHypothesis(id: Hypothesis['id'], changes: Partial<Hy
       )
     );
 
-    const missingFieldsMap = Object.fromEntries(
-      get(cards).map((card) => [card.id, card.missingFields])
-    );
-    localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
+    if (!get(cards).some((card) => card.isTutorial)) {
+      const missingFieldsMap = Object.fromEntries(
+        get(cards).map((card) => [card.id, card.missingFields])
+      );
+      localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
+    }
 
     console.log(`Returning updated hypothesis for ID ${id}:`, newHp);
     return newHp;

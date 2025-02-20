@@ -147,7 +147,7 @@ button.badge:hover {
   .dataset {
     flex-grow: 1;
     overflow: auto; 
-    max-height: calc(100vh - 50px); 
+    /* max-height: calc(100vh - 50px);  */
   }
 
   .tooltip::before {

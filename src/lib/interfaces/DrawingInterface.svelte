@@ -192,14 +192,14 @@
 
     const combinedImage = getCanvasImage();
     if (!combinedImage) {
-      caption.$value.set('Failed to capture image'); 
+      caption.$value.set('Failed to capture image');
       console.error('Failed to capture canvas image');
       return;
     }
 
     try {
-      const newCaption = await generateCaption(combinedImage); 
-      caption.$value.set(newCaption); 
+      const newCaption = await generateCaption(combinedImage);
+      caption.$value.set(newCaption);
     } catch (error) {
       caption.$value.set('Error generating caption');
       console.error('Error generating caption:', error);
@@ -209,16 +209,18 @@
 
 <div class="marcelle card">
   <div class="button-row">
-    <button
-      class="btn btn-sm {isDrawingMode ? 'btn-active btn-secondary' : 'btn-secondary'}"
-      on:click={toggleDrawingMode}
-    >
-      {#if isDrawingMode}
-        <FontAwesomeIcon icon={faMousePointer} />
-      {:else}
-        <FontAwesomeIcon icon={faPencilAlt} />
-      {/if}
-    </button>
+    <div class="drawing-tutorial">
+      <button
+        class="btn btn-sm {isDrawingMode ? 'btn-active btn-secondary' : 'btn-secondary'}"
+        on:click={toggleDrawingMode}
+      >
+        {#if isDrawingMode}
+          <FontAwesomeIcon icon={faMousePointer} />
+        {:else}
+          <FontAwesomeIcon icon={faPencilAlt} />
+        {/if}
+      </button>
+    </div>
 
     {#if isDrawingMode}
       <div class="brush-settings">
@@ -301,7 +303,6 @@
     border: none;
     cursor: grab;
   }
-
 
   /* .conf-row {
     display: flex;

@@ -233,17 +233,18 @@
               />
             </svg>
           </button>
-
-          <h4 class="text-xs text-gray-500 font-medium">write Description:</h4>
-          <textarea
-            bind:value={card.description}
-            class="textarea textarea-xs textarea-accent textarea-bordered w-full {card.missingFields
-              ?.description
-              ? 'border-red-500 border-2'
-              : ''}"
-            placeholder="Describe the bias here"
-            on:input={() => updateHypothesis(card.id, { description: card.description })}
-          />
+          <div class="description-tutorial">
+            <h4 class="text-xs text-gray-500 font-medium" style="margin-bottom: 5px;">write Description:</h4>
+            <textarea
+              bind:value={card.description}
+              class="textarea textarea-xs textarea-accent textarea-bordered w-full {card
+                .missingFields?.description
+                ? 'border-red-500 border-2'
+                : ''}"
+              placeholder="Describe the bias here"
+              on:input={() => updateHypothesis(card.id, { description: card.description })}
+            />
+          </div>
           <h4 class="text-xs text-gray-500 font-medium">drag and drop Supporting Examples:</h4>
           <div
             class="grid grid-cols-5 gap-2 p-4 border border-dashed evidence-area rounded-lg min-h-[100px] {card

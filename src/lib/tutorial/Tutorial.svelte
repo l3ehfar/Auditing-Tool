@@ -7,6 +7,8 @@
   import { base } from '$app/paths';
   import { cards, removeHypothesis } from '$lib/schemas/hypothesis_storage';
 
+  export let userCondition: string | undefined;
+
   let tour;
 
   function clearTutorialCards() {
@@ -18,10 +20,6 @@
       return currentCards.filter((c) => !c.isTutorial);
     });
 
-    localStorage.setItem(
-      'missingFields',
-      JSON.stringify(Object.fromEntries(get(cards).map((card) => [card.id, card.missingFields]))),
-    );
   }
 
   function restartTutorial() {
@@ -37,11 +35,11 @@
   }
 
   onMount(() => {
-    const tutorialCompleted = localStorage.getItem('tutorialCompleted');
-    if (tutorialCompleted === 'true') {
-      goto(`${base}/main`);
-      return;
-    }
+    // const tutorialCompleted = localStorage.getItem('tutorialCompleted');
+    // if (tutorialCompleted === 'true') {
+    //   goto(`${base}/main`);
+    //   return;
+    // }
 
     setTimeout(() => {
       document.querySelector('.shepherd-modal-overlay-container')?.remove();
@@ -104,6 +102,110 @@
       buttons: [{ text: 'Next', action: tour.next }],
     });
 
+    if (userCondition === 'conditionThree') {
+      tour.addStep({
+        id: 'filtering-interface',
+        text: 'Add "woman" keyword here, and filter the dataset.',
+        attachTo: { element: '.word-selection', on: 'left' },
+        buttons: [],
+        when: {
+          show: () => {
+            document.querySelector('.word-selection button')?.addEventListener(
+              'click',
+              () => {
+                tour.next();
+              },
+              { once: true },
+            );
+          },
+        },
+      });
+
+      tour.addStep({
+      id: 'filtered dataset',
+      text: 'Scroll to see all the images that their captions contains the word "woman".',
+      attachTo: { element: '.dataset-tutorial', on: 'bottom' },
+      buttons: [{ text: 'Next', action: tour.next }],
+    });
+
+    tour.addStep({
+        id: 'filtering-interface-two',
+        text: 'Add another keyword: "kitchen", and filter the dataset.',
+        attachTo: { element: '.word-selection', on: 'left' },
+        buttons: [],
+        when: {
+          show: () => {
+            document.querySelector('.word-selection button')?.addEventListener(
+              'click',
+              () => {
+                tour.next();
+              },
+              { once: true },
+            );
+          },
+        },
+      });
+
+      tour.addStep({
+      id: 'filtered-dataset-2',
+      text: 'Scroll to see all the images that their captions contains the word "woman" and "kitchen".',
+      attachTo: { element: '.dataset-tutorial', on: 'bottom' },
+      buttons: [{ text: 'Next', action: tour.next }],
+    });
+
+    tour.addStep({
+        id: 'remove-filter',
+        text: 'you can remove keywords by clicking on [X] button and re-expand the dataset.',
+        attachTo: { element: '.badge-container', on: 'left' },
+        buttons: [],
+        when: {
+          show: () => {
+            document.querySelector('.badge-remove-btn')?.addEventListener(
+              'click',
+              () => {
+                tour.next();
+              },
+              { once: true },
+            );
+          },
+        },
+      });
+
+
+    }
+
+    if (userCondition === 'conditionTwo') {
+      tour.addStep({
+        id: 'drawing-interface',
+        text: 'To mask parts of the image, click on this button.',
+        attachTo: { element: '.drawing-tutorial', on: 'left' },
+        buttons: [],
+        when: {
+          show: () => {
+            document.querySelector('.drawing-tutorial')?.addEventListener(
+              'click',
+              () => {
+                tour.next();
+              },
+              { once: true },
+            );
+          },
+        },
+      });
+      tour.addStep({
+        id: 'brush-setting',
+        text: 'choose your brush size, and the color.',
+        attachTo: { element: '.brush-settings', on: 'top' },
+        buttons: [{ text: 'Next', action: tour.next }],
+      });
+      tour.addStep({
+        id: 'draw-regenerate-caption',
+        text: 'Mask a part of the image and release the mouse to regenerate caption.',
+        attachTo: { element: '.instax-style', on: 'left' },
+        buttons: [{ text: 'Next', action: tour.next }],
+      });
+    }
+
     tour.addStep({
       id: 'new-bias',
       text: 'To document a new bias, click this button. It will allow you to provide details about the observed bias.',
@@ -160,12 +262,12 @@
 
     tour.addStep({
       id: 'repeat-step',
-      text: 'Repeat the process for at least 5 different images. Drop each image into this area to continue.',
+      text: 'Drag and Drop all images in this area to continue the tutorial.',
       attachTo: { element: '.evidence-area', on: 'bottom' },
       buttons: [],
       when: {
         show: () => {
-          let dropCounter = 0; 
+          let dropCounter = 0;
 
           const evidenceArea = document.querySelector('.evidence-area');
           if (!evidenceArea) return;
@@ -185,7 +287,6 @@
           tour.currentStep.options.dropHandler = dropHandler;
         },
         hide: () => {
-
           const evidenceArea = document.querySelector('.evidence-area');
           if (evidenceArea && tour.currentStep.options.dropHandler) {
             evidenceArea.removeEventListener('drop', tour.currentStep.options.dropHandler);
@@ -198,7 +299,7 @@
     tour.addStep({
       id: 'write-description',
       text: 'Write a description in the text area. This helps in documenting your observation comprehensively.',
-      attachTo: { element: 'textarea', on: 'bottom' },
+      attachTo: { element: '.description-tutorial', on: 'bottom' },
       buttons: [{ text: 'Next', action: tour.next }],
     });
 
@@ -214,7 +315,7 @@
         {
           action: () => {
             finishTutorial();
-            localStorage.setItem('tutorialCompleted', 'true');
+            // localStorage.setItem('tutorialCompleted', 'true');
           },
           text: 'Finish',
         },
