@@ -36,10 +36,10 @@ export interface ImageInstance extends Instance {
   public: boolean;
 }
 
-// fetch dataset and captions
-export async function fetchDatasetFromGitHub() {
+
+export async function fetchDatasetFromGitHub(url: string, datasetInstance: any) {
   try {
-    const response = await fetch('https://raw.githubusercontent.com/l3ehfar/UserStudyDataset/main/captions.json');
+    const response = await fetch(url);
     const captionsData = await response.json();
 
     for (const [imageName, data] of Object.entries(captionsData)) {
@@ -48,15 +48,31 @@ export async function fetchDatasetFromGitHub() {
       const imageData = await fetchImageAsImageData(image_url);
       const processedImage = await cropAndResizeImage(imageData);
 
+      const thumbnailCanvas = document.createElement('canvas');
+      const thumbCtx = thumbnailCanvas.getContext('2d');
+
+      if (!thumbCtx) {
+        throw new Error("Failed to create canvas context for thumbnail.");
+      }
+
+      thumbnailCanvas.width = 100;
+      thumbnailCanvas.height = 100;
+
+      const processedBitmap = await createImageBitmap(processedImage);
+
+      thumbCtx.drawImage(processedBitmap, 0, 0, 100, 100);
+
+      const thumbnailData = thumbnailCanvas.toDataURL();
+
       const instance: ImageInstance = {
         x: processedImage,
-        y: 'Images', 
-        thumbnail: image_url,
+        y: 'Images',
+        thumbnail: thumbnailData,
         caption: caption,
         public: true,
       };
 
-      const createdInstance = await trainingSet.create(instance);
+      const createdInstance = await datasetInstance.create(instance);
 
       if (createdInstance && (createdInstance._id || createdInstance.id)) {
         console.log(`Uploaded: ${imageName}`);
@@ -67,6 +83,15 @@ export async function fetchDatasetFromGitHub() {
   } catch (error) {
     console.error('Error fetching dataset:', error);
   }
+}
+
+export async function fetchMainDatasetFromGitHub() {
+  const url = 'https://raw.githubusercontent.com/l3ehfar/UserStudyDataset/main/captions.json';
+  await fetchDatasetFromGitHub(url, trainingSet);
+}
+export async function fetchTutorialDatasetFromGitHub() {
+  const url = 'https://raw.githubusercontent.com/l3ehfar/UserStudyDataset/main/Tutorialcaptions.json';
+  await fetchDatasetFromGitHub(url, tutorialDataset);
 }
 
 async function fetchImageAsImageData(imageUrl: string): Promise<ImageData> {
@@ -165,67 +190,67 @@ export async function generateCaption(image: ImageData): Promise<string> {
   }
 }
 
-export async function handleCapture() {
-  const labelValue = label.$value.get();
-  const imageData = input.$images.get();
-  const thumbnailData = input.$thumbnails.get();
+// export async function handleCapture() {
+//   const labelValue = label.$value.get();
+//   const imageData = input.$images.get();
+//   const thumbnailData = input.$thumbnails.get();
 
-  if (imageData && labelValue) {
-    try {
-      const processedImage = await cropAndResizeImage(imageData);
+//   if (imageData && labelValue) {
+//     try {
+//       const processedImage = await cropAndResizeImage(imageData);
 
-      let instanceCaption = caption.$value.get();
+//       let instanceCaption = caption.$value.get();
 
-      if (!instanceCaption || instanceCaption === 'No caption generated') {
-        instanceCaption = await generateCaption(processedImage);
-      }
+//       if (!instanceCaption || instanceCaption === 'No caption generated') {
+//         instanceCaption = await generateCaption(processedImage);
+//       }
 
-      if (!instanceCaption || instanceCaption === 'No caption generated') {
-        notification({
-          title: 'Caption Generation Failed',
-          message: 'No valid caption was generated for the uploaded image.',
-          duration: 5000,
-        });
-        return;
-      }
+//       if (!instanceCaption || instanceCaption === 'No caption generated') {
+//         notification({
+//           title: 'Caption Generation Failed',
+//           message: 'No valid caption was generated for the uploaded image.',
+//           duration: 5000,
+//         });
+//         return;
+//       }
 
-      instanceCaption = cleanCaption(instanceCaption);
+//       instanceCaption = cleanCaption(instanceCaption);
 
-      const instance: ImageInstance = {
-        x: processedImage,
-        y: labelValue,
-        thumbnail: thumbnailData,
-        caption: instanceCaption,
-        public: true,
-      };
+//       const instance: ImageInstance = {
+//         x: processedImage,
+//         y: labelValue,
+//         thumbnail: thumbnailData,
+//         caption: instanceCaption,
+//         public: true,
+//       };
 
-      const createdInstance = await trainingSet.create(instance);
+//       const createdInstance = await trainingSet.create(instance);
 
-      if (createdInstance && (createdInstance._id || createdInstance.id)) {
-        notification({
-          title: 'Upload Successful',
-          message: `The item was successfully uploaded with the caption: "${instanceCaption}"`,
-          duration: 5000,
-        });
-      } else {
-        console.error('Instance creation failed or no `_id` or `id` assigned.');
-      }
-    } catch (error) {
-      console.error('Error during image processing or dataset creation:', error);
-      notification({
-        title: 'Error',
-        message: 'Failed to process and save the image. Please try again.',
-        duration: 5000,
-      });
-    }
-  } else {
-    notification({
-      title: 'Upload Failed',
-      message: 'Please provide an image and label.',
-      duration: 3000,
-    });
-  }
-}
+//       if (createdInstance && (createdInstance._id || createdInstance.id)) {
+//         notification({
+//           title: 'Upload Successful',
+//           message: `The item was successfully uploaded with the caption: "${instanceCaption}"`,
+//           duration: 5000,
+//         });
+//       } else {
+//         console.error('Instance creation failed or no `_id` or `id` assigned.');
+//       }
+//     } catch (error) {
+//       console.error('Error during image processing or dataset creation:', error);
+//       notification({
+//         title: 'Error',
+//         message: 'Failed to process and save the image. Please try again.',
+//         duration: 5000,
+//       });
+//     }
+//   } else {
+//     notification({
+//       title: 'Upload Failed',
+//       message: 'Please provide an image and label.',
+//       duration: 3000,
+//     });
+//   }
+// }
 
 input.$images.subscribe(async (image) => {
   if (image) {
@@ -241,60 +266,68 @@ input.$images.subscribe(async (image) => {
 });
 
 export let trainingSet = dataset<ImageInstance>('training-set-dashboard', store);
-export let fullTrainingSet = dataset<ImageInstance>('training-set-dashboard', store);
+// export let fullTrainingSet = dataset<ImageInstance>('training-set-dashboard', store);
+export let tutorialDataset = dataset<ImageInstance>('tutorial-dataset-dashboard', store);
+
 export let datasetExplorerComponent = datasetExplorer(trainingSet);
+export let TutorialdatasetExplorerComponent = datasetExplorer(tutorialDataset);
 
-export const $currentClasses = new Stream<string[]>([], true);
-fullTrainingSet.$changes
-  .filter((x) => x.length > 0)
-  .map(() => trainingSet.distinct('y'))
-  .awaitPromises()
-  .subscribe((x) => {
-    $currentClasses.set(x);
-  });
+// export const $currentClasses = new Stream<string[]>([], true);
+// fullTrainingSet.$changes
+//   .filter((x) => x.length > 0)
+//   .map(() => trainingSet.distinct('y'))
+//   .awaitPromises()
+//   .subscribe((x) => {
+//     $currentClasses.set(x);
+//   });
 
-export const selectClass = select(['all']);
-$currentClasses.subscribe((c) => selectClass.$options.set(['all', ...c]));
+// export const selectClass = select(['all']);
+// $currentClasses.subscribe((c) => selectClass.$options.set(['all', ...c]));
 
-selectClass.title = 'Choose a Class:';
-selectClass.$value.subscribe((label: string) => {
-  const newQuery = label === 'all' ? {} : { y: label };
+// selectClass.title = 'Choose a Class:';
+// selectClass.$value.subscribe((label: string) => {
+//   const newQuery = label === 'all' ? {} : { y: label };
 
-  if (JSON.stringify(newQuery) === JSON.stringify(trainingSet.query)) return;
+//   if (JSON.stringify(newQuery) === JSON.stringify(trainingSet.query)) return;
 
-  if (label === 'all') {
-    dynamicClassLabel.set('all');
-  } else {
-    dynamicClassLabel.set(label);
-  }
+//   if (label === 'all') {
+//     dynamicClassLabel.set('all');
+//   } else {
+//     dynamicClassLabel.set(label);
+//   }
 
-  // aggregatedPersonFrequency.classLabel = 0;
-  // coOccurrences.classLabel = {};
-  // captionInstances.classLabel = {};
+// aggregatedPersonFrequency.classLabel = 0;
+// coOccurrences.classLabel = {};
+// captionInstances.classLabel = {};
 
-  trainingSet.sift(newQuery);
-});
+//   trainingSet.sift(newQuery);
+// });
 
 let selectedImageInstance: ImageInstance | null = null;
 
-const $selectedImage = datasetExplorerComponent.$selected
-  .filter((selection) => selection.length === 1)
-  .map(async ([id]) => {
-    if (id) {
-      return await trainingSet.get(id, ['_id', 'x', 'thumbnail', 'y', 'caption']);
-    } else {
-      throw new Error('No valid ID provided for instance retrieval');
-    }
-  })
-  .awaitPromises()
-  .map((instance) => {
-    selectedImageInstance = instance;
-    return instance;
-  });
+function createSelectedImageStream(datasetInstance: any, datasetExplorerInstance: any) {
+  return datasetExplorerInstance.$selected
+    .filter((selection) => selection.length === 1)
+    .map(async ([id]) => {
+      if (id) {
+        return await datasetInstance.get(id, ['_id', 'x', 'thumbnail', 'y', 'caption']);
+      } else {
+        throw new Error('No valid ID provided for instance retrieval');
+      }
+    })
+    .awaitPromises()
+    .map((instance) => {
+      return instance;
+    });
+}
+
+export const $selectedImageMain = createSelectedImageStream(trainingSet, datasetExplorerComponent);
+export const $selectedImageTutorial = createSelectedImageStream(tutorialDataset, TutorialdatasetExplorerComponent);
+
 
 export const $imageStream = new Stream<ImageData>(Stream.never());
 
-$selectedImage.subscribe((instance) => {
+$selectedImageMain.subscribe((instance) => {
   if (instance) {
     $imageStream.set(instance.x);
     if (instance.caption && instance.caption.length > 0) {
@@ -304,6 +337,22 @@ $selectedImage.subscribe((instance) => {
       notification({
         title: 'No Caption Found',
         message: 'This image does not have a caption in the dataset.',
+        duration: 5000,
+      });
+    }
+  }
+});
+
+$selectedImageTutorial.subscribe((instance) => {
+  if (instance) {
+    $imageStream.set(instance.x);
+    if (instance.caption && instance.caption.length > 0) {
+      caption.$value.set(instance.caption);
+    } else {
+      caption.$value.set('No caption found for this image');
+      notification({
+        title: 'No Caption Found',
+        message: 'This image does not have a caption in the tutorial dataset.',
         duration: 5000,
       });
     }

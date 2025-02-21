@@ -32,7 +32,7 @@
       </div>
     {/if}
     <div class="slot-section flex-1 overflow-auto p-2">
-      <Dataset />
+      <Dataset phase="tutorial" />
     </div>
   </div>
   <div class="flex flex-col h-full p-2 bg-white shadow rounded-lg">

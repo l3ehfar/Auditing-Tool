@@ -125,7 +125,7 @@ export async function updateHypothesis(id: Hypothesis['id'], changes: Partial<Hy
           : c
       )
     );
-
+ 
     if (!get(cards).some((card) => card.isTutorial)) {
       const missingFieldsMap = Object.fromEntries(
         get(cards).map((card) => [card.id, card.missingFields])

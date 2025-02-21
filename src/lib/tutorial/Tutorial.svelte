@@ -35,11 +35,11 @@
   }
 
   onMount(() => {
-    // const tutorialCompleted = localStorage.getItem('tutorialCompleted');
-    // if (tutorialCompleted === 'true') {
-    //   goto(`${base}/main`);
-    //   return;
-    // }
+    const tutorialCompleted = localStorage.getItem('tutorialCompleted');
+    if (tutorialCompleted === 'true') {
+      goto(`${base}/main`);
+      return;
+    }
 
     setTimeout(() => {
       document.querySelector('.shepherd-modal-overlay-container')?.remove();
@@ -315,7 +315,7 @@
         {
           action: () => {
             finishTutorial();
-            // localStorage.setItem('tutorialCompleted', 'true');
+            localStorage.setItem('tutorialCompleted', 'true');
           },
           text: 'Finish',
         },

@@ -92,44 +92,44 @@
     return null;
   }
 
-  async function deleteSelectedInstances() {
-    let p: Promise<unknown> = Promise.resolve();
-    for (const id of selected.get()) {
-      // eslint-disable-next-line no-loop-func
-      p = p.then(() => dataset.remove(id));
-    }
-    await p;
-    selected.set([]);
-  }
+  // async function deleteSelectedInstances() {
+  //   let p: Promise<unknown> = Promise.resolve();
+  //   for (const id of selected.get()) {
+  //     // eslint-disable-next-line no-loop-func
+  //     p = p.then(() => dataset.remove(id));
+  //   }
+  //   await p;
+  //   selected.set([]);
+  // }
 
-  async function relabelSelectedInstances(newLabel: string) {
-    let p: Promise<unknown> = Promise.resolve();
-    for (const id of selected.get()) {
-      // eslint-disable-next-line no-loop-func
-      p = p.then(() => dataset.patch(id, { y: newLabel }));
-    }
-    await p;
-    selected.set([]);
-  }
+  // async function relabelSelectedInstances(newLabel: string) {
+  //   let p: Promise<unknown> = Promise.resolve();
+  //   for (const id of selected.get()) {
+  //     // eslint-disable-next-line no-loop-func
+  //     p = p.then(() => dataset.patch(id, { y: newLabel }));
+  //   }
+  //   await p;
+  //   selected.set([]);
+  // }
 
   let metaPressed = false;
   let shiftPressed = false;
-  function handleKeydown(event: KeyboardEvent) {
-    if (['Meta', 'Control'].includes(event.key)) {
-      metaPressed = true;
-    } else if (event.key === 'Shift') {
-      shiftPressed = true;
-    } else if (event.key === 'Delete' || (event.key === 'Backspace' && metaPressed)) {
-      deleteSelectedInstances();
-    }
-  }
-  function handleKeyup(event: KeyboardEvent) {
-    if (['Meta', 'Control'].includes(event.key)) {
-      metaPressed = false;
-    } else if (event.key === 'Shift') {
-      shiftPressed = false;
-    }
-  }
+  // function handleKeydown(event: KeyboardEvent) {
+  //   if (['Meta', 'Control'].includes(event.key)) {
+  //     metaPressed = true;
+  //   } else if (event.key === 'Shift') {
+  //     shiftPressed = true;
+  //   } else if (event.key === 'Delete' || (event.key === 'Backspace' && metaPressed)) {
+  //     deleteSelectedInstances();
+  //   }
+  // }
+  // function handleKeyup(event: KeyboardEvent) {
+  //   if (['Meta', 'Control'].includes(event.key)) {
+  //     metaPressed = false;
+  //   } else if (event.key === 'Shift') {
+  //     shiftPressed = false;
+  //   }
+  // }
 
   let initialId: ObjectId = null;
 
@@ -161,39 +161,39 @@
     }
   }
 
-  function onClassAction(label: string, code: string) {
-    let result: string;
-    switch (code) {
-      case 'edit':
-        // eslint-disable-next-line no-alert
-        result = window.prompt('Enter the new label', label);
-        if (result) {
-          dataset.patch(null, { y: result }, { query: { y: label } });
-        }
-        break;
+  // function onClassAction(label: string, code: string) {
+  //   let result: string;
+  //   switch (code) {
+  //     case 'edit':
+  //       // eslint-disable-next-line no-alert
+  //       result = window.prompt('Enter the new label', label);
+  //       if (result) {
+  //         dataset.patch(null, { y: result }, { query: { y: label } });
+  //       }
+  //       break;
 
-      case 'delete':
-        dataset.remove(null, { query: { y: label } });
-        break;
+  //     case 'delete':
+  //       dataset.remove(null, { query: { y: label } });
+  //       break;
 
-      case 'deleteInstances':
-        deleteSelectedInstances();
-        break;
+  //     case 'deleteInstances':
+  //       deleteSelectedInstances();
+  //       break;
 
-      case 'relabelInstances':
-        // eslint-disable-next-line no-alert
-        result = window.prompt('Enter the new label', label);
-        if (result) {
-          relabelSelectedInstances(result);
-        }
-        break;
+  //     case 'relabelInstances':
+  //       // eslint-disable-next-line no-alert
+  //       result = window.prompt('Enter the new label', label);
+  //       if (result) {
+  //         relabelSelectedInstances(result);
+  //       }
+  //       break;
 
-      default:
-        // eslint-disable-next-line no-alert
-        alert(`Class ${label}: ${code}`);
-        break;
-    }
-  }
+  //     default:
+  //       // eslint-disable-next-line no-alert
+  //       alert(`Class ${label}: ${code}`);
+  //       break;
+  //   }
+  // }
 
   onMount(() => {
     updateClassesFromDataset();
@@ -259,7 +259,7 @@
   });
 </script>
 
-<svelte:window on:keydown={handleKeydown} on:keyup={handleKeyup} />
+<!-- <svelte:window on:keydown={handleKeydown} on:keyup={handleKeyup} /> -->
 
 <ViewContainer {title} {loading}>
   {#if classes && !dataStoreError}
@@ -277,7 +277,7 @@
       {#each Object.entries(classes) as [label, { loaded, total, instances }]}
         <div class="browser-class" style="flex: 1 1 calc(33.333% / {zoomLevel});">
           <div class="w-full">
-            <div class="browser-class-header">
+            <!-- <div class="browser-class-header">
               <span class="browser-class-title">{label}</span>
               <PopMenu
                 actions={[
@@ -299,7 +299,7 @@
                 )}
                 on:select={(e) => onClassAction(label, e.detail)}
               />
-            </div>
+            </div> -->
             
               <div class="browser-class-body">
                 {#each instances as { id, thumbnail } (id)}
@@ -307,7 +307,6 @@
                   <img
                     src={thumbnail}
                     alt="thumbnail"
-                    style="width: 60px; height: 60px;"
                     class="m-1"
                     class:selected={$selected.includes(id)}
                     class:highlighted={highlighted.includes(id)}

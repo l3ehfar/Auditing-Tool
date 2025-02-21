@@ -206,6 +206,22 @@
 
     draggedItem = null;
   }
+
+  let confirmingRemoval = writable<string | null>(null);
+
+function confirmRemove(cardId: string) {
+  confirmingRemoval.set(cardId);
+}
+
+function cancelRemove() {
+  confirmingRemoval.set(null);
+}
+
+function handleRemove(cardId: string) {
+  removeHypothesis(cardId);
+  confirmingRemoval.set(null);
+}
+
 </script>
 
 <div class="marcelle-card">
@@ -214,9 +230,25 @@
       <div class="card shadow-lg bg-base-100 p-4">
         <h2 class="text-sm my-2 mx-4">Bias {card.index}</h2>
         <div class="card-body">
+          {#if $confirmingRemoval === card.id}
+          <div class="flex gap-2 absolute top-2 right-2">
+            <button
+              class="btn btn-xs btn-error"
+              on:click={() => handleRemove(card.id)}
+            >
+              Confirm Delete
+            </button>
+            <button
+              class="btn btn-xs btn-outline"
+              on:click={cancelRemove}
+            >
+              Cancel
+            </button>
+          </div>
+        {:else}
           <button
             class="btn btn-xs btn-circle btn-error btn-outline absolute top-2 right-2"
-            on:click={() => removeHypothesis(card.id)}
+            on:click={() => confirmRemove(card.id)}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -233,6 +265,8 @@
               />
             </svg>
           </button>
+        {/if}
+        
           <div class="description-tutorial">
             <h4 class="text-xs text-gray-500 font-medium" style="margin-bottom: 5px;">write Description:</h4>
             <textarea
