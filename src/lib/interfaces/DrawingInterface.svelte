@@ -15,7 +15,7 @@
     faUpDownLeftRight,
   } from '@fortawesome/free-solid-svg-icons';
   import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
-  import { droppedItems } from '$lib/store';
+  import { logEvent } from '$lib/marcelle/log';
 
   let cleanup: () => void;
   let canvas: fabric.Canvas | null = null;
@@ -113,6 +113,9 @@
     canvas.on('mouse:up', () => {
       if (canvas.isDrawingMode) {
         canvasHistory.push(canvas.toJSON());
+
+        logEvent('mask-image');
+        
         (async () => {
           await generateCaptionForCombinedImage();
         })();

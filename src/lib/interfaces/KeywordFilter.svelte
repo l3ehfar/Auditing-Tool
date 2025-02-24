@@ -1,8 +1,10 @@
 <script lang="ts">
   import { caption, trainingSet, dynamicClassLabel, captionInstances } from '$lib/marcelle';
   import { onMount } from 'svelte';
+  import { logEvent } from '$lib/marcelle/log';
 
   let selectedWordsList: string[] = [];
+  let previousWordsList: string[] = [];
 
   let processedCaptions = new Set<string>();
   let nonGenderedWordFrequency = {};
@@ -58,39 +60,26 @@
 
   function handleWordSelection() {
     const uniqueWords = new Set(selectedWordsList);
+    let addedWord = null;
 
     if (selectedWord && !uniqueWords.has(selectedWord)) {
       uniqueWords.add(selectedWord);
+      addedWord = selectedWord;
       selectedWord = '';
     }
 
     if (customWord.trim() && !uniqueWords.has(customWord)) {
       uniqueWords.add(customWord.trim());
+      addedWord = customWord.trim();
       customWord = '';
     }
 
     selectedWordsList = Array.from(uniqueWords);
-    filterDatasetBySelectedWords();
-  }
-
-  $: if ($dynamicClassLabel) {
-    selectedWords = [];
-    frequentWords = getMostFrequentNonGenderedWords(5);
-  } else {
-    frequentWords = [];
-  }
-
-  function highlightInstancesInDatasetExplorer(word) {
-    const instances = captionInstances[word] || [];
-    const instanceIds = instances.map((instance) => instance.id).filter(Boolean);
-
-    if (instanceIds.length > 0) {
-      trainingSet.sift({ id: { $in: instanceIds } });
-    } else {
-      console.warn(`No valid instances found for Word: "${word}".`);
-      alert(`No instances found for the word "${word}".`);
+    if (addedWord) {
+      filterDatasetBySelectedWords('add', addedWord);
     }
   }
+
 
   function resetDatasetFilter() {
     trainingSet.sift({});
@@ -99,13 +88,7 @@
 
   function removeWord(word: string) {
     selectedWordsList = selectedWordsList.filter((w) => w !== word); // Remove the word
-    filterDatasetBySelectedWords();
-  }
-
-  $: {
-    if (selectedWordsList) {
-      filterDatasetBySelectedWords();
-    }
+    filterDatasetBySelectedWords('remove', word);
   }
 
   function getMostFrequentNonGenderedWords(limit) {
@@ -179,7 +162,10 @@
     return false;
   }
 
-  function filterDatasetBySelectedWords() {
+  function filterDatasetBySelectedWords(action: 'add' | 'remove', word: string) {
+    
+    logEvent('filter-dataset', { action, word, currentWords: [...selectedWordsList] });
+
     if (selectedWordsList.length === 0) {
       resetDatasetFilter();
       return;
@@ -214,13 +200,7 @@
     trainingSet.sift({ id: { $in: matchingInstances } });
   }
 
-  $: {
-    if (selectedWordsList.length > 0) {
-      filterDatasetBySelectedWords();
-    } else {
-      resetDatasetFilter();
-    }
-  }
+
 </script>
 
 <div class="marcelle card">

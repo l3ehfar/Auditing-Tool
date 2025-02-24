@@ -276,7 +276,7 @@ function handleRemove(cardId: string) {
                 ? 'border-red-500 border-2'
                 : ''}"
               placeholder="Describe the bias here"
-              on:input={() => updateHypothesis(card.id, { description: card.description })}
+              on:blur={() => updateHypothesis(card.id, { description: card.description })}
             />
           </div>
           <h4 class="text-xs text-gray-500 font-medium">drag and drop Supporting Examples:</h4>

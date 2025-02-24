@@ -1,7 +1,7 @@
 import { store } from '$lib/marcelle';
 import { type ObjectId } from '@marcellejs/core';
 import { get, writable, derived } from 'svelte/store';
-
+import { logEvent } from '$lib/marcelle/log';
 
 export interface Hypothesis {
   id: ObjectId;
@@ -100,6 +100,10 @@ export async function createHypothesis(isTutorial: boolean = false) {
     );
     localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
   }
+
+  logEvent('create-audit-card', { hypothesisId: hp.id });
+  return hp;
+
 }
 
 export async function updateHypothesis(id: Hypothesis['id'], changes: Partial<Hypothesis>) {
@@ -125,12 +129,16 @@ export async function updateHypothesis(id: Hypothesis['id'], changes: Partial<Hy
           : c
       )
     );
- 
+
     if (!get(cards).some((card) => card.isTutorial)) {
       const missingFieldsMap = Object.fromEntries(
         get(cards).map((card) => [card.id, card.missingFields])
       );
       localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
+    }
+
+    if (changes.description !== undefined) {
+      logEvent('edit-description', { hypothesisId: id, newDescription: changes.description });
     }
 
     console.log(`Returning updated hypothesis for ID ${id}:`, newHp);
@@ -147,6 +155,9 @@ export async function removeHypothesis(id: Hypothesis['id']) {
   try {
     const removed = await service.remove(id);
     console.log('removed hypothesis:', removed);
+
+    logEvent('remove-audit-card', { hypothesisId: id });
+
     cards.update((currentCards) => {
       const updatedCards = currentCards.filter((c) => c.id !== id);
 
@@ -169,7 +180,8 @@ export async function addEvidence(id: Hypothesis['id'], thumbnail: string, capti
     throw new Error(`Hypothesis ${id} does not exist.`);
   }
 
-  const newEvidence = [...current.evidence, { id: crypto.randomUUID(), thumbnail, caption }];
+  const evidenceId = crypto.randomUUID();
+  const newEvidence = [...current.evidence, { id: evidenceId, thumbnail, caption }];
   // console.log("Updated evidence before patch:", newEvidence);
 
   return updateHypothesis(id, { evidence: newEvidence }).then((updatedCard) => {
@@ -183,6 +195,8 @@ export async function addEvidence(id: Hypothesis['id'], thumbnail: string, capti
     cards.update((currentCards) =>
       currentCards.map((c) => (c.id === id ? { ...c, evidence: updatedCard.evidence } : c))
     );
+
+    logEvent('add-evidence', { hypothesisId: id, evidenceId, thumbnail, caption });
 
     return updatedCard;
   }).catch((error) => {
@@ -213,6 +227,8 @@ export async function removeEvidence(hypothesis: Hypothesis, evidenceId: string)
           : c
       )
     );
+
+    logEvent('remove-evidence', { hypothesisId: hypothesis.id, evidenceId });
 
     const missingFieldsMap = Object.fromEntries(
       get(cards).map((card) => [card.id, card.missingFields])

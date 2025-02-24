@@ -7,6 +7,7 @@
   import { ViewContainer } from '@marcellejs/design-system';
   import { Button, PopMenu } from '@marcellejs/design-system';
   import { highlightedInstances } from '$lib/store';
+  import { logEvent } from '$lib/marcelle/log';
 
   let highlighted = [];
   highlightedInstances.subscribe((value) => {
@@ -159,6 +160,10 @@
       selected.set(id ? [id] : []);
       initialId = id;
     }
+
+    if (id) {
+    logEvent('select-image', { instanceId: id }); 
+  }
   }
 
   // function onClassAction(label: string, code: string) {
