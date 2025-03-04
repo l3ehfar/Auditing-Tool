@@ -3,7 +3,7 @@
   "port": "PORT",
   "mongodb": "MONGODB_URL",
   "whitelist": {
-    "services": [],
+    "services": "*",
     "assets": ["jpg", "jpeg", "png", "wav"]
   },
   "authentication": {

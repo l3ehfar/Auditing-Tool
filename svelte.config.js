@@ -10,8 +10,13 @@ const config = {
 
   kit: {
     adapter: adapter({
-      fallback: '200.html',
+      fallback: 'index.html',
     }),
+    paths: {
+      // Update the base path here for production:
+      base: '',
+      // base: '/auditing',
+    },
   },
 };
 
