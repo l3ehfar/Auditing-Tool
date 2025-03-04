@@ -162,8 +162,8 @@
     }
 
     if (id) {
-    logEvent('select-image', { instanceId: id }); 
-  }
+      logEvent('select-image', { instanceId: id });
+    }
   }
 
   // function onClassAction(label: string, code: string) {
@@ -305,23 +305,23 @@
                 on:select={(e) => onClassAction(label, e.detail)}
               />
             </div> -->
-            
-              <div class="browser-class-body">
-                {#each instances as { id, thumbnail } (id)}
-                  <!-- svelte-ignore a11y-click-events-have-key-events -->
-                  <img
-                    src={thumbnail}
-                    alt="thumbnail"
-                    class="m-1"
-                    class:selected={$selected.includes(id)}
-                    class:highlighted={highlighted.includes(id)}
-                    in:scale
-                    out:scale
-                    class:small-thumbnail={zoomLevel === 1}
-                    class:large-thumbnail={zoomLevel === 2}
-                    on:click|stopPropagation={() => selectInstance(id)}
-                  />
-                {/each}
+
+            <div class="browser-class-body">
+              {#each instances as { id, thumbnail }}
+                <!-- svelte-ignore a11y-click-events-have-key-events -->
+                <img
+                  src={thumbnail}
+                  alt="thumbnail"
+                  class="m-1"
+                  class:selected={$selected.includes(id)}
+                  class:highlighted={highlighted.includes(id)}
+                  in:scale
+                  out:scale
+                  class:small-thumbnail={zoomLevel === 1}
+                  class:large-thumbnail={zoomLevel === 2}
+                  on:click|stopPropagation={() => selectInstance(id)}
+                />
+              {/each}
             </div>
           </div>
           <div class="pb-1">
