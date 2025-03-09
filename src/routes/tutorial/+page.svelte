@@ -18,7 +18,7 @@
   });
 </script>
 
-<Tutorial userCondition={data.user?.condition} />
+<Tutorial userID={data.user?._id} userCondition={data.user?.condition} />
 
 <div class="grid h-screen w-screen grid-cols-layout gap-2 p-2">
   <div class="flex flex-col h-full p-2 bg-white shadow rounded-lg">

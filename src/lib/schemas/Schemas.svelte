@@ -30,6 +30,12 @@
       if (finished) {
         (async () => {
           await saveCompleteHypotheses();
+          notification({
+            title: 'Proceeding to Next Step',
+            message: "You're moving to the next step. Please wait...",
+            duration: 5000, 
+          });
+
           goto(`${base}/hypotheses-questionnaire`);
         })();
       }

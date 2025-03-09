@@ -86,6 +86,12 @@
     canSubmit.set(false);
     goto(`${base}/post-questionnaire`);
   }
+
+  function nextCard(currentIndex: number) {
+    const totalCards = get(cards).length;
+    const nextIndex = currentIndex + 1 <= totalCards ? currentIndex + 1 : 0; 
+    selectedCardIndex.set(nextIndex);
+  }
 </script>
 
 <div class="flex h-screen">
@@ -124,6 +130,10 @@
         <div
           class="bias-container flex flex-col w-full max-w-5xl p-6 shadow-lg bg-base-100 rounded-lg"
         >
+          <button class="btn btn-xs btn-secondary self-start font-bold" on:click={() => nextCard(card.index)}>
+            Next Card
+          </button>
+
           <h3 class="text-xl font-bold text-gray-700 text-center w-full mb-4">
             Bias {card.index}
           </h3>
@@ -223,7 +233,7 @@
                   bind:value={card.questionnaire.comments}
                   class="textarea textarea-bordered"
                   placeholder="Add your comments here..."
-                  on:input={(e) => saveAnswer(card.id, 'comments', e.target.value)}
+                  on:blur={(e) => saveAnswer(card.id, 'comments', e.target.value)}
                   disabled={$disableInputs}
                 />
               </div>

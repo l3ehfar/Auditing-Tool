@@ -9,6 +9,7 @@ export interface PostQAnswers {
   q4: number;
   q5: number;
   q6: number;
+  q7: number;
   openEndedResponse?: string; 
   // common fields
   submitted: boolean;
@@ -33,11 +34,12 @@ export const items: Array<{ question: string; name: keyof PostQAnswers }> = [
     name: 'q3',
   },
   { question: '4. The interface made it easy and efficient to collect examples of the bias.', name: 'q4' },
-  { question: '5. Overall, I found this interface helpful in conducting the auditing task.', name: 'q5' },
+  { question: '5. It was difficult to determine if my hypotheses were true.', name: 'q5' },
+  { question: '6. Overall, I found this interface helpful in conducting the auditing task.', name: 'q6' },
   {
     question:
-      '6. In my opinion, the image captioning model is biased against women.',
-    name: 'q6'
+      '7. In my opinion, the image captioning model is biased against women.',
+    name: 'q7'
   },
   { question: 'Do you have any additional comments about the task or the study?', name: 'openEndedResponse' }, 
 ];

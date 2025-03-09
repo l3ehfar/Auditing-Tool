@@ -82,7 +82,7 @@ export async function createHypothesis(isTutorial: boolean = false) {
     isTutorial
   });
 
-  console.log('created hp', hp);
+  // console.log('created hp', hp);
 
   const newCard: Hypothesis = {
     ...hp,
@@ -109,7 +109,7 @@ export async function createHypothesis(isTutorial: boolean = false) {
 export async function updateHypothesis(id: Hypothesis['id'], changes: Partial<Hypothesis>) {
   try {
     const newHp = await service.patch(id, changes);
-    console.log('Updated hypothesis:', newHp);
+    // console.log('Updated hypothesis:', newHp);
 
     if (!newHp) {
       throw new Error(`updateHypothesis failed: No valid response for ID ${id}`);
@@ -141,7 +141,7 @@ export async function updateHypothesis(id: Hypothesis['id'], changes: Partial<Hy
       logEvent('edit-description', { hypothesisId: id, newDescription: changes.description });
     }
 
-    console.log(`Returning updated hypothesis for ID ${id}:`, newHp);
+    // console.log(`Returning updated hypothesis for ID ${id}:`, newHp);
     return newHp;
 
   } catch (error) {
@@ -154,7 +154,7 @@ export async function updateHypothesis(id: Hypothesis['id'], changes: Partial<Hy
 export async function removeHypothesis(id: Hypothesis['id']) {
   try {
     const removed = await service.remove(id);
-    console.log('removed hypothesis:', removed);
+    // console.log('removed hypothesis:', removed);
 
     logEvent('remove-audit-card', { hypothesisId: id });
 
@@ -281,7 +281,7 @@ export async function saveCompleteHypotheses() {
 
   cards.set(validHypotheses);
 
-  console.log('Final stored hypotheses:', validHypotheses);
+  // console.log('Final stored hypotheses:', validHypotheses);
 }
 
 export async function fetchCompletedHypotheses() {

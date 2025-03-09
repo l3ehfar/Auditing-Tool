@@ -8,6 +8,7 @@
   import { cards, removeHypothesis } from '$lib/schemas/hypothesis_storage';
 
   export let userCondition: string | undefined;
+  export let userID: string | undefined;
 
   let tour;
 
@@ -19,7 +20,6 @@
 
       return currentCards.filter((c) => !c.isTutorial);
     });
-
   }
 
   function restartTutorial() {
@@ -29,13 +29,18 @@
   }
 
   function finishTutorial() {
+    if (!userID) return; // Ensure we have a valid user ID
+
     clearTutorialCards();
     tour.cancel();
+    localStorage.setItem(`tutorialCompleted_${userID}`, 'true'); // Store per user
     goto(`${base}/main`);
   }
 
   onMount(() => {
-    const tutorialCompleted = localStorage.getItem('tutorialCompleted');
+    if (!userID) return;
+
+    const tutorialCompleted = localStorage.getItem(`tutorialCompleted_${userID}`);
     if (tutorialCompleted === 'true') {
       goto(`${base}/main`);
       return;
@@ -122,13 +127,13 @@
       });
 
       tour.addStep({
-      id: 'filtered dataset',
-      text: 'Scroll to see all the images that their captions contains the word "woman".',
-      attachTo: { element: '.dataset-tutorial', on: 'bottom' },
-      buttons: [{ text: 'Next', action: tour.next }],
-    });
+        id: 'filtered dataset',
+        text: 'You can see all the images that their captions contains the word "woman".',
+        attachTo: { element: '.dataset-tutorial', on: 'bottom' },
+        buttons: [{ text: 'Next', action: tour.next }],
+      });
 
-    tour.addStep({
+      tour.addStep({
         id: 'filtering-interface-two',
         text: 'Add another keyword: "kitchen", and filter the dataset.',
         attachTo: { element: '.word-selection', on: 'left' },
@@ -147,13 +152,13 @@
       });
 
       tour.addStep({
-      id: 'filtered-dataset-2',
-      text: 'Scroll to see all the images that their captions contains the word "woman" and "kitchen".',
-      attachTo: { element: '.dataset-tutorial', on: 'bottom' },
-      buttons: [{ text: 'Next', action: tour.next }],
-    });
+        id: 'filtered-dataset-2',
+        text: 'You can see all the images that their captions contains the word "woman" and "kitchen".',
+        attachTo: { element: '.dataset-tutorial', on: 'bottom' },
+        buttons: [{ text: 'Next', action: tour.next }],
+      });
 
-    tour.addStep({
+      tour.addStep({
         id: 'remove-filter',
         text: 'you can remove keywords by clicking on [X] button and re-expand the dataset.',
         attachTo: { element: '.badge-container', on: 'left' },
@@ -170,31 +175,29 @@
           },
         },
       });
-
-
     }
 
     if (userCondition === 'conditionTwo') {
-      tour.addStep({
-        id: 'drawing-interface',
-        text: 'To mask parts of the image, click on this button.',
-        attachTo: { element: '.drawing-tutorial', on: 'left' },
-        buttons: [],
-        when: {
-          show: () => {
-            document.querySelector('.drawing-tutorial')?.addEventListener(
-              'click',
-              () => {
-                tour.next();
-              },
-              { once: true },
-            );
-          },
-        },
-      });
+      // tour.addStep({
+      //   id: 'drawing-interface',
+      //   text: 'To mask parts of the image, click on this button.',
+      //   attachTo: { element: '.drawing-tutorial', on: 'left' },
+      //   buttons: [],
+      //   when: {
+      //     show: () => {
+      //       document.querySelector('.drawing-tutorial')?.addEventListener(
+      //         'click',
+      //         () => {
+      //           tour.next();
+      //         },
+      //         { once: true },
+      //       );
+      //     },
+      //   },
+      // });
       tour.addStep({
         id: 'brush-setting',
-        text: 'choose your brush size, and the color.',
+        text: 'To mask parts of the image, choose your brush size, and the color.',
         attachTo: { element: '.brush-settings', on: 'top' },
         buttons: [{ text: 'Next', action: tour.next }],
       });
@@ -262,7 +265,7 @@
 
     tour.addStep({
       id: 'repeat-step',
-      text: 'Drag and Drop all images in this area to continue the tutorial.',
+      text: 'Repeat the process. Drag and Drop 3 examples in this area to continue the tutorial.',
       attachTo: { element: '.evidence-area', on: 'bottom' },
       buttons: [],
       when: {
@@ -275,7 +278,7 @@
           const dropHandler = (event) => {
             dropCounter++;
             console.log('Items dropped:', dropCounter);
-            if (dropCounter >= 4) {
+            if (dropCounter >= 2) {
               tour.next();
 
               evidenceArea.removeEventListener('drop', dropHandler);
@@ -315,7 +318,9 @@
         {
           action: () => {
             finishTutorial();
-            localStorage.setItem('tutorialCompleted', 'true');
+            if (userID) {
+              localStorage.setItem(`tutorialCompleted_${userID}`, 'true');
+            }
           },
           text: 'Finish',
         },

@@ -19,7 +19,7 @@
 
   let cleanup: () => void;
   let canvas: fabric.Canvas | null = null;
-  let isDrawingMode = false;
+  let isDrawingMode = true;
   let canvasHistory: any[] = [];
   let imageObject: fabric.Image | null = null;
 
@@ -99,7 +99,7 @@
     }
 
     canvas = new fabric.Canvas(canvasEl, {
-      isDrawingMode: false,
+      isDrawingMode: true,
       width: width,
       height: height,
     });
@@ -109,6 +109,13 @@
     if (dragOverlay) {
       dragOverlay.addEventListener('dragstart', onDragStart);
     }
+
+    if (canvas.isDrawingMode) {
+    if (!canvas.freeDrawingBrush) {
+      canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+    }
+    updateBrushSettings();
+  }
 
     canvas.on('mouse:up', () => {
       if (canvas.isDrawingMode) {
@@ -184,6 +191,8 @@
       if (lastObject !== imageObject) {
         canvas.remove(lastObject);
         canvasHistory.pop();
+
+        generateCaptionForCombinedImage();
       } else {
         canvas.getObjects().push(lastObject);
       }
@@ -212,7 +221,7 @@
 
 <div class="marcelle card">
   <div class="button-row">
-    <div class="drawing-tutorial">
+    <!-- <div class="drawing-tutorial">
       <button
         class="btn btn-sm {isDrawingMode ? 'btn-active btn-secondary' : 'btn-secondary'}"
         on:click={toggleDrawingMode}
@@ -223,9 +232,9 @@
           <FontAwesomeIcon icon={faPencilAlt} />
         {/if}
       </button>
-    </div>
-
-    {#if isDrawingMode}
+    </div> -->
+<!-- 
+    {#if isDrawingMode} -->
       <div class="brush-settings">
         <label for="brush-size" class="text-xs">Brush Size: {brushSize}px</label>
         <input
@@ -255,7 +264,7 @@
           ></button>
         </div>
       </div>
-    {/if}
+    <!-- {/if} -->
 
     <button class="btn btn-sm" on:click={undoLastAction}>
       <FontAwesomeIcon icon={faRotateLeft} />
@@ -337,14 +346,7 @@
   }
 
   .drag-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: transparent;
-    z-index: 20;
-    cursor: grab;
+    display: none;
   }
 
   .button-row {

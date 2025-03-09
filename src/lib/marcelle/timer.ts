@@ -67,5 +67,6 @@ export const formattedTime = derived(timeLeft, ($timeLeft) => {
 });
 
 export const timeProgress = derived(timeLeft, ($timeLeft) => {
-  return (($timeLeft / TIMER_DURATION) * 100).toFixed(2);
+  return (((TIMER_DURATION - $timeLeft) / TIMER_DURATION) * 100).toFixed(2);
 });
+

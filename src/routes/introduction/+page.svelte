@@ -120,7 +120,6 @@
             <li><strong>Voluntarily leaving the study at any point</strong></li>
             <li><strong>Not finishing the study for any reason</strong> – If you do not complete all the required steps, you will be screened out.</li>
             <li><strong>Failing two attention checks</strong></li>
-            <li><strong>Failing the training phase</strong> – The training includes multiple parts, and failing each part twice will result in screening out.</li>
             <li><strong>Inactivity tracking</strong> – Your activity during the task is tracked, and if you remain inactive for 3 minutes, you will receive a notification. Receiving three notifications will result in exclusion.</li>
             <li><strong>Technical issues</strong> – If a technical issue prevents you from completing the study, we will compensate you accordingly.</li>
         </ul>

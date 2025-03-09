@@ -1,6 +1,7 @@
 import { notification } from '@marcellejs/core';
 import { store } from '$lib/marcelle';
 import { writable } from 'svelte/store';
+import { isTimerRunning } from '$lib/marcelle/timer';
 
 const INACTIVITY_THRESHOLD = 180000; // 3 minutes
 const INACTIVITY_KEY = 'inactivityCounter';
@@ -61,6 +62,14 @@ function stopInactivityCheck() {
     inactivityCheckInterval = null;
   }
 }
+
+isTimerRunning.subscribe(($isTimerRunning) => {
+  if (!$isTimerRunning) {
+    stopActivityTracking();
+  } else {
+    startActivityTracking();
+  }
+});
 
 function handleVisibilityChange() {
   if (document.visibilityState === 'visible') {

@@ -12,7 +12,7 @@
   export let data: { user: User | null };
   let answers: Partial<PostQAnswers> = {};
 
-  const keys = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6'];
+  const keys = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7'];
 
   $: pageProgress.set(
     (Object.keys(answers).filter((k) => keys.includes(k)).length * 100) / keys.length,
@@ -54,7 +54,7 @@
               <textarea
                 id={name}
                 bind:value={answers[name]}
-                on:input={(e) => record(name, e)}
+                on:blur={(e) => record(name, e)}
                 class="w-full p-2 border border-gray-300 rounded-lg"
                 rows="4"
                 placeholder="Your response (optional)"

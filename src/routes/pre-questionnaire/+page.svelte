@@ -55,11 +55,13 @@
             on:change={(e) => record('accuracy', e)}
           >
             <option value="" disabled>Select...</option>
+            <option>Less than High School</option>
             <option>High school or equivalent</option>
             <option>College</option>
             <option>Associate Degree</option>
             <option>Bachelor's Degree</option>
             <option>Master's Degree</option>
+            <option>Professional Degree</option>
             <option>Doctoral degree</option>
           </select>
         </div>
