@@ -21,12 +21,39 @@ export interface Hypothesis {
   };
 }
 
-
 export const cards = writable<Hypothesis[]>([]);
 const service = store.service<Hypothesis>('hypotheses');
 
+export async function upload(blob: Blob, filename?: string) {
+  try {
+    const ext = blob.type.split(';')[0].split('/')[1];
+    const name = filename || `asset.${ext}`;
+    const fd = new FormData();
+    fd.append(name, blob);
+    const fetchOptions: RequestInit = { method: 'POST', body: fd };
+    if (store.requiresAuth) {
+      const jwt = await (store.feathers as any).authentication.getAccessToken();
+      const headers = new Headers({ Authorization: `Bearer ${jwt}` });
+      fetchOptions.headers = headers;
+    }
+    const res = await fetch(`${store.location}/assets/upload`, fetchOptions);
+
+    const resData = await res.json();
+    const filePath = `/assets/${resData.blob}`;
+
+    console.log('Success:', filePath);
+    return filePath;
+  } catch (error) {
+    console.error('Error:', error);
+    return null;
+  }
+}
+
 export async function fetchHypotheses(isTutorial: boolean = false) {
-  const allHypotheses = await service.items().query({ $sort: { index: 1 } }).toArray();
+  const allHypotheses = await service
+    .items()
+    .query({ $sort: { index: 1 } })
+    .toArray();
 
   const filteredHypotheses = isTutorial
     ? allHypotheses
@@ -61,8 +88,6 @@ export async function fetchHypotheses(isTutorial: boolean = false) {
   cards.set(hypothesesWithMissingFields);
 }
 
-
-
 export async function createHypothesis(isTutorial: boolean = false) {
   const maxIndex = await service
     .items()
@@ -73,13 +98,12 @@ export async function createHypothesis(isTutorial: boolean = false) {
 
   const index = maxIndex.length ? maxIndex[0].index + 1 : 1;
 
-
   const hp = await service.create({
     index,
     description: '',
     evidence: [],
     questionnaire: { question1: '', question2: '', question3: '', comments: '' },
-    isTutorial
+    isTutorial,
   });
 
   // console.log('created hp', hp);
@@ -87,23 +111,24 @@ export async function createHypothesis(isTutorial: boolean = false) {
   const newCard: Hypothesis = {
     ...hp,
     isTutorial,
-    missingFields: isTutorial ? undefined : {
-      description: true,
-      evidence: true,
-    },
+    missingFields: isTutorial
+      ? undefined
+      : {
+          description: true,
+          evidence: true,
+        },
   };
 
   cards.set([...get(cards), newCard]);
   if (!isTutorial) {
     const missingFieldsMap = Object.fromEntries(
-      get(cards).map((card) => [card.id, card.missingFields])
+      get(cards).map((card) => [card.id, card.missingFields]),
     );
     localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
   }
 
   logEvent('create-audit-card', { hypothesisId: hp.id });
   return hp;
-
 }
 
 export async function updateHypothesis(id: Hypothesis['id'], changes: Partial<Hypothesis>) {
@@ -119,20 +144,22 @@ export async function updateHypothesis(id: Hypothesis['id'], changes: Partial<Hy
       currentCards.map((c) =>
         c.id === id
           ? {
-            ...c,
-            ...newHp,
-            missingFields: c.isTutorial ? undefined : {
-              description: !newHp.description.trim(),
-              evidence: newHp.evidence.length === 0,
-            },
-          }
-          : c
-      )
+              ...c,
+              ...newHp,
+              missingFields: c.isTutorial
+                ? undefined
+                : {
+                    description: !newHp.description.trim(),
+                    evidence: newHp.evidence.length === 0,
+                  },
+            }
+          : c,
+      ),
     );
 
     if (!get(cards).some((card) => card.isTutorial)) {
       const missingFieldsMap = Object.fromEntries(
-        get(cards).map((card) => [card.id, card.missingFields])
+        get(cards).map((card) => [card.id, card.missingFields]),
       );
       localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
     }
@@ -143,13 +170,11 @@ export async function updateHypothesis(id: Hypothesis['id'], changes: Partial<Hy
 
     // console.log(`Returning updated hypothesis for ID ${id}:`, newHp);
     return newHp;
-
   } catch (error) {
     console.error(`An error occurred while updating hypothesis ${id}:`, error);
     return null;
   }
 }
-
 
 export async function removeHypothesis(id: Hypothesis['id']) {
   try {
@@ -162,13 +187,12 @@ export async function removeHypothesis(id: Hypothesis['id']) {
       const updatedCards = currentCards.filter((c) => c.id !== id);
 
       const missingFieldsMap = Object.fromEntries(
-        updatedCards.map((card) => [card.id, card.missingFields])
+        updatedCards.map((card) => [card.id, card.missingFields]),
       );
       localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
 
       return updatedCards;
     });
-
   } catch (error) {
     console.log('An error occurred while removing hypothesis', id);
   }
@@ -180,28 +204,38 @@ export async function addEvidence(id: Hypothesis['id'], thumbnail: string, capti
     throw new Error(`Hypothesis ${id} does not exist.`);
   }
 
+  const blob = await fetch(thumbnail).then((res) => res.blob());
+  console.log('blob', blob);
+  const filePath = await upload(blob);
+  console.log('filePath', filePath);
+
   const evidenceId = crypto.randomUUID();
-  const newEvidence = [...current.evidence, { id: evidenceId, thumbnail, caption }];
+  const newEvidence = [
+    ...current.evidence,
+    { id: evidenceId, thumbnail: store.location + filePath, caption },
+  ];
   // console.log("Updated evidence before patch:", newEvidence);
 
-  return updateHypothesis(id, { evidence: newEvidence }).then((updatedCard) => {
-    if (!updatedCard) {
-      console.error(`Failed to update hypothesis ${id}.`);
-      return;
-    }
+  return updateHypothesis(id, { evidence: newEvidence })
+    .then((updatedCard) => {
+      if (!updatedCard) {
+        console.error(`Failed to update hypothesis ${id}.`);
+        return;
+      }
 
-    // console.log("Evidence successfully added. Updated evidence list:", updatedCard.evidence.map(e => e.id));
+      // console.log("Evidence successfully added. Updated evidence list:", updatedCard.evidence.map(e => e.id));
 
-    cards.update((currentCards) =>
-      currentCards.map((c) => (c.id === id ? { ...c, evidence: updatedCard.evidence } : c))
-    );
+      cards.update((currentCards) =>
+        currentCards.map((c) => (c.id === id ? { ...c, evidence: updatedCard.evidence } : c)),
+      );
 
-    logEvent('add-evidence', { hypothesisId: id, evidenceId, thumbnail, caption });
+      logEvent('add-evidence', { hypothesisId: id, evidenceId, thumbnail, caption });
 
-    return updatedCard;
-  }).catch((error) => {
-    console.error(`Error in addEvidence when updating hypothesis ${id}:`, error);
-  });
+      return updatedCard;
+    })
+    .catch((error) => {
+      console.error(`Error in addEvidence when updating hypothesis ${id}:`, error);
+    });
 }
 
 export async function removeEvidence(hypothesis: Hypothesis, evidenceId: string) {
@@ -218,28 +252,26 @@ export async function removeEvidence(hypothesis: Hypothesis, evidenceId: string)
       currentCards.map((c) =>
         c.id === hypothesis.id
           ? {
-            ...c,
-            missingFields: {
-              ...c.missingFields,
-              evidence: updatedCard.evidence.length === 0,
-            },
-          }
-          : c
-      )
+              ...c,
+              missingFields: {
+                ...c.missingFields,
+                evidence: updatedCard.evidence.length === 0,
+              },
+            }
+          : c,
+      ),
     );
 
     logEvent('remove-evidence', { hypothesisId: hypothesis.id, evidenceId });
 
     const missingFieldsMap = Object.fromEntries(
-      get(cards).map((card) => [card.id, card.missingFields])
+      get(cards).map((card) => [card.id, card.missingFields]),
     );
     localStorage.setItem('missingFields', JSON.stringify(missingFieldsMap));
-
   } catch (error) {
     console.log('An error occurred while trying to remove evidence with id:', evidenceId, error);
   }
 }
-
 
 export async function enableQuestionnaireForAll() {
   const allHypotheses = get(cards);
@@ -247,18 +279,17 @@ export async function enableQuestionnaireForAll() {
   await Promise.all(
     allHypotheses.map((hypothesis) =>
       updateHypothesis(hypothesis.id, {
-        questionnaire: { question1: '', question2: '', question3: '', comments: '' }
-      })
-    )
+        questionnaire: { question1: '', question2: '', question3: '', comments: '' },
+      }),
+    ),
   );
-
 }
 
 export async function saveCompleteHypotheses() {
   const allHypotheses = get(cards);
 
   const validHypotheses = allHypotheses.filter(
-    (hypothesis) => hypothesis.description.trim() !== '' && hypothesis.evidence.length > 0
+    (hypothesis) => hypothesis.description.trim() !== '' && hypothesis.evidence.length > 0,
   );
 
   await Promise.all(
@@ -266,18 +297,16 @@ export async function saveCompleteHypotheses() {
       updateHypothesis(hypothesis.id, {
         description: hypothesis.description,
         evidence: hypothesis.evidence,
-        questionnaire: hypothesis.questionnaire
-      })
-    )
+        questionnaire: hypothesis.questionnaire,
+      }),
+    ),
   );
 
   const incompleteHypotheses = allHypotheses.filter(
-    (hypothesis) => hypothesis.description.trim() === '' || hypothesis.evidence.length === 0
+    (hypothesis) => hypothesis.description.trim() === '' || hypothesis.evidence.length === 0,
   );
 
-  await Promise.all(
-    incompleteHypotheses.map((hypothesis) => service.remove(hypothesis.id))
-  );
+  await Promise.all(incompleteHypotheses.map((hypothesis) => service.remove(hypothesis.id)));
 
   cards.set(validHypotheses);
 
@@ -285,10 +314,13 @@ export async function saveCompleteHypotheses() {
 }
 
 export async function fetchCompletedHypotheses() {
-  const hp = await service.items().query({ $sort: { index: 1 } }).toArray();
+  const hp = await service
+    .items()
+    .query({ $sort: { index: 1 } })
+    .toArray();
 
   const completedHypotheses = hp.filter(
-    (hypothesis) => hypothesis.description.trim() !== '' && hypothesis.evidence.length > 0
+    (hypothesis) => hypothesis.description.trim() !== '' && hypothesis.evidence.length > 0,
   );
 
   cards.set(completedHypotheses);
