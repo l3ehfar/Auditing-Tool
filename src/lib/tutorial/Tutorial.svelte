@@ -29,11 +29,11 @@
   }
 
   function finishTutorial() {
-    if (!userID) return; // Ensure we have a valid user ID
+    if (!userID) return; 
 
     clearTutorialCards();
     tour.cancel();
-    localStorage.setItem(`tutorialCompleted_${userID}`, 'true'); // Store per user
+    localStorage.setItem(`tutorialCompleted_${userID}`, 'true'); 
     goto(`${base}/main`);
   }
 
