@@ -19,12 +19,16 @@
   import { base } from '$app/paths';
   import { page } from '$app/stores';
 
+  export let userID: string | undefined;
+
   const isTutorial = derived(page, ($page) => $page.url.pathname.includes('/tutorial'));
 
   onMount(() => {
     const tutorialMode = get(isTutorial);
     fetchHypotheses(tutorialMode);
-    startActivityTracking();
+    if (userID) {
+      startActivityTracking(userID); // Pass userID to activity tracking
+    }
 
     const unsubscribe = isTimerFinished.subscribe((finished) => {
       if (finished) {
@@ -59,7 +63,9 @@
     });
 
     return () => {
-      stopActivityTracking();
+      if (userID) {
+        stopActivityTracking(userID); 
+      }
       unsubscribeTimer();
       unsubscribe();
       unsubscribeReminder();
@@ -129,7 +135,7 @@
 
     try {
       const data = JSON.parse(rawData);
-      console.log('Dropped data:', data);
+      // console.log('Dropped data:', data);
 
       let thumbnail = data.thumbnail || null;
 
@@ -137,7 +143,7 @@
         thumbnail = await generateThumbnailOnDrop(data.src);
       }
       const newCard = await addEvidence(card.id, thumbnail, data.caption);
-      console.log('Updated card with new evidence:', newCard);
+      // console.log('Updated card with new evidence:', newCard);
     } catch (error) {
       console.error('Failed to parse drag data:', error);
     }

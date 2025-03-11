@@ -28,7 +28,7 @@
 
     {#if data.user?.condition === 'conditionThree'}
       <div class="cond3">
-        <KeywordFilter />
+        <KeywordFilter phase="tutorial" />
       </div>
     {/if}
     <div class="slot-section flex-1 overflow-auto p-2">
@@ -52,7 +52,7 @@
       <h2 class="text-xl my-2">Bias Cards</h2>
     </div>
     <div class="flex-1 overflow-auto p-2 rounded">
-      <Schemas />
+      <Schemas userID={data.user?._id} />
     </div>
   </div>
 </div>

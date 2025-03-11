@@ -1,7 +1,10 @@
 <script lang="ts">
-  import { caption, trainingSet, dynamicClassLabel, captionInstances } from '$lib/marcelle';
+  import { caption, trainingSet, tutorialDataset, dynamicClassLabel, captionInstances } from '$lib/marcelle';
   import { onMount } from 'svelte';
   import { logEvent } from '$lib/marcelle/log';
+  import { dataset } from '@marcellejs/core';
+  
+  export let phase: 'tutorial' | 'main';
 
   let selectedWordsList: string[] = [];
   let previousWordsList: string[] = [];
@@ -80,9 +83,9 @@
     }
   }
 
-
   function resetDatasetFilter() {
-    trainingSet.sift({});
+    const datasetToUse = phase === 'tutorial' ? tutorialDataset : trainingSet;
+    datasetToUse.sift({});
     selectedWordsList = [];
   }
 
@@ -101,7 +104,10 @@
   async function fetchAndProcessCaptions() {
     try {
       await trainingSet.ready;
-      const allInstances = await trainingSet.find();
+      await tutorialDataset.ready; 
+
+      const datasetToUse = phase === 'tutorial' ? tutorialDataset : trainingSet;
+      const allInstances = await datasetToUse.find();
       if (allInstances.data.length > 0) {
         allInstances.data.forEach((instance) => {
           if (instance.caption) {
@@ -163,7 +169,6 @@
   }
 
   function filterDatasetBySelectedWords(action: 'add' | 'remove', word: string) {
-    
     logEvent('filter-dataset', { action, word, currentWords: [...selectedWordsList] });
 
     if (selectedWordsList.length === 0) {
@@ -171,6 +176,8 @@
       return;
     }
 
+    const datasetToUse = phase === 'tutorial' ? tutorialDataset : trainingSet;
+  
     let matchingInstances: string[] = [];
     for (const [captionWord, instances] of Object.entries(captionInstances)) {
       if (matchWord(selectedWordsList[0], captionWord)) {
@@ -192,15 +199,13 @@
 
       if (matchingInstances.length === 0) {
         console.warn('No matching instances for the selected words.');
-        trainingSet.sift({ id: { $in: [] } });
+        datasetToUse.sift({ id: { $in: [] } });
         return;
       }
     }
 
-    trainingSet.sift({ id: { $in: matchingInstances } });
+    datasetToUse.sift({ id: { $in: matchingInstances } });
   }
-
-
 </script>
 
 <div class="marcelle card">

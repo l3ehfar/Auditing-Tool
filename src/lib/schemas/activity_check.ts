@@ -3,90 +3,112 @@ import { store } from '$lib/marcelle';
 import { writable } from 'svelte/store';
 import { isTimerRunning } from '$lib/marcelle/timer';
 
-const INACTIVITY_THRESHOLD = 180000; // 3 minutes
-const INACTIVITY_KEY = 'inactivityCounter';
+const INACTIVITY_THRESHOLD = 180000; 
 
-let inactivityCount = parseInt(localStorage.getItem(INACTIVITY_KEY) || '0', 10);
-let lastActivityTimestamp = Date.now();
-let inactivityCheckInterval: ReturnType<typeof setInterval> | null = null;
 
-export const inactivityStore = writable(inactivityCount);
+export const inactivityStore = writable<{ [key: string]: number }>({});
 
-const inactivityService = store.service<{ count: number, timestamp: string }>('inactivity_logs');
 
-function resetInactivityTimer() {
-  lastActivityTimestamp = Date.now();
+const inactivityService = store.service<{ userID: string; count: number; timestamp: string }>('inactivity_logs');
+
+
+let lastActivityTimestamp: { [key: string]: number } = {};
+let inactivityCheckInterval: { [key: string]: ReturnType<typeof setInterval> | null } = {};
+
+
+function getUserInactivity(userID: string) {
+  return parseInt(sessionStorage.getItem(`inactivityCounter_${userID}`) || '0', 10);
 }
 
-async function checkInactivity() {
-  const now = Date.now();
-  if (now - lastActivityTimestamp >= INACTIVITY_THRESHOLD) {
-    inactivityCount++;
-    localStorage.setItem(INACTIVITY_KEY, inactivityCount.toString());
-    inactivityStore.set(inactivityCount); 
 
-    await logInactivity();
+function setUserInactivity(userID: string, count: number) {
+  sessionStorage.setItem(`inactivityCounter_${userID}`, count.toString());
+  inactivityStore.update((store) => ({ ...store, [userID]: count }));
+}
+
+
+function resetInactivityTimer(userID: string) {
+  lastActivityTimestamp[userID] = Date.now();
+}
+
+
+async function checkInactivity(userID: string) {
+  if (!userID) return;
+
+  const now = Date.now();
+  if (!lastActivityTimestamp[userID]) lastActivityTimestamp[userID] = now;
+
+  if (now - lastActivityTimestamp[userID] >= INACTIVITY_THRESHOLD) {
+    let inactivityCount = getUserInactivity(userID) + 1;
+    setUserInactivity(userID, inactivityCount);
+
+    await logInactivity(userID, inactivityCount);
 
     notification({
       title: 'You’ve been inactive!',
-      message: `It seems you’ve been inactive for over 3 minutes. (${inactivityCount} times)`,
+      message: `You’ve been inactive for over 3 minutes. (${inactivityCount} times)`,
       duration: 5000,
       type: 'danger',
     });
 
-    lastActivityTimestamp = now;
+    lastActivityTimestamp[userID] = now;
   }
 }
 
-async function logInactivity() {
+
+async function logInactivity(userID: string, count: number) {
   try {
     await inactivityService.create({
-      count: inactivityCount,
+      userID,
+      count,
       timestamp: new Date().toISOString(),
     });
-    console.log('Inactivity logged:', inactivityCount);
+    console.log(`Inactivity logged for ${userID}:`, count);
   } catch (error) {
     console.error('Failed to log inactivity:', error);
   }
 }
 
-function startInactivityCheck() {
-  if (!inactivityCheckInterval) {
-    inactivityCheckInterval = setInterval(checkInactivity, 1000); // Check every second
+
+export function startActivityTracking(userID: string) {
+  if (!userID || inactivityCheckInterval[userID]) return;
+
+  lastActivityTimestamp[userID] = Date.now();
+
+  document.addEventListener('mousemove', () => resetInactivityTimer(userID));
+  document.addEventListener('keydown', () => resetInactivityTimer(userID));
+  document.addEventListener('visibilitychange', () => handleVisibilityChange(userID));
+
+  inactivityCheckInterval[userID] = setInterval(() => checkInactivity(userID), 1000);
+}
+
+
+export function stopActivityTracking(userID: string) {
+  if (!userID || !inactivityCheckInterval[userID]) return;
+
+  clearInterval(inactivityCheckInterval[userID]);
+  inactivityCheckInterval[userID] = null;
+
+  document.removeEventListener('mousemove', () => resetInactivityTimer(userID));
+  document.removeEventListener('keydown', () => resetInactivityTimer(userID));
+  document.removeEventListener('visibilitychange', () => handleVisibilityChange(userID));
+}
+
+
+function handleVisibilityChange(userID: string) {
+  if (document.visibilityState === 'visible') {
+    resetInactivityTimer(userID);
   }
 }
 
-function stopInactivityCheck() {
-  if (inactivityCheckInterval) {
-    clearInterval(inactivityCheckInterval);
-    inactivityCheckInterval = null;
-  }
-}
 
 isTimerRunning.subscribe(($isTimerRunning) => {
+  const userID = sessionStorage.getItem('userID'); 
+  if (!userID) return;
+
   if (!$isTimerRunning) {
-    stopActivityTracking();
+    stopActivityTracking(userID);
   } else {
-    startActivityTracking();
+    startActivityTracking(userID);
   }
 });
-
-function handleVisibilityChange() {
-  if (document.visibilityState === 'visible') {
-    lastActivityTimestamp = Date.now();
-  }
-}
-
-export function startActivityTracking() {
-  document.addEventListener('mousemove', resetInactivityTimer);
-  document.addEventListener('keydown', resetInactivityTimer);
-  document.addEventListener('visibilitychange', handleVisibilityChange);
-  startInactivityCheck();
-}
-
-export function stopActivityTracking() {
-  stopInactivityCheck();
-  document.removeEventListener('mousemove', resetInactivityTimer);
-  document.removeEventListener('keydown', resetInactivityTimer);
-  document.removeEventListener('visibilitychange', handleVisibilityChange);
-}

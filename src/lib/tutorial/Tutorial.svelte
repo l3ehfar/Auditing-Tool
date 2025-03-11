@@ -277,7 +277,7 @@
 
           const dropHandler = (event) => {
             dropCounter++;
-            console.log('Items dropped:', dropCounter);
+            // console.log('Items dropped:', dropCounter);
             if (dropCounter >= 2) {
               tour.next();
 
