@@ -1,16 +1,22 @@
 <script lang="ts">
-  import { caption, trainingSet, tutorialDataset, dynamicClassLabel, captionInstances } from '$lib/marcelle';
+  import {
+    caption,
+    trainingSet,
+    tutorialDataset,
+    dynamicClassLabel,
+    captionInstances,
+  } from '$lib/marcelle';
   import { onMount } from 'svelte';
   import { logEvent } from '$lib/marcelle/log';
-  import { dataset } from '@marcellejs/core';
-  
+
   export let phase: 'tutorial' | 'main';
 
   let selectedWordsList: string[] = [];
-  let previousWordsList: string[] = [];
 
   let processedCaptions = new Set<string>();
   let nonGenderedWordFrequency = {};
+  let isDataReady = false;
+  let filterTimeout;
 
   const stopWords = [
     'in',
@@ -52,7 +58,6 @@
     });
   }
 
-  let selectedWords = [];
   let selectedWord = '';
   let customWord = '';
   let frequentWords = [];
@@ -90,8 +95,18 @@
   }
 
   function removeWord(word: string) {
-    selectedWordsList = selectedWordsList.filter((w) => w !== word); // Remove the word
-    filterDatasetBySelectedWords('remove', word);
+    if (!captionInstances[word]) {
+      console.warn(
+        `Warning: Trying to remove a word that doesn't exist in captionInstances - "${word}"`,
+      );
+      return;
+    }
+
+    selectedWordsList = selectedWordsList.filter((w) => w !== word);
+
+    setTimeout(() => {
+      filterDatasetBySelectedWords('remove', word);
+    }, 100);
   }
 
   function getMostFrequentNonGenderedWords(limit) {
@@ -103,8 +118,9 @@
 
   async function fetchAndProcessCaptions() {
     try {
+      isDataReady = false;
       await trainingSet.ready;
-      await tutorialDataset.ready; 
+      await tutorialDataset.ready;
 
       const datasetToUse = phase === 'tutorial' ? tutorialDataset : trainingSet;
       const allInstances = await datasetToUse.find();
@@ -118,6 +134,7 @@
       } else {
         console.warn('Dataset is empty.');
       }
+      isDataReady = true;
     } catch (error) {
       console.error('Error fetching dataset instances:', error);
     }
@@ -147,10 +164,6 @@
     }
   }
 
-  function normalizeWord(word: string): string {
-    return word.toLowerCase().trim();
-  }
-
   function matchWord(word: string, target: string): boolean {
     word = word.toLowerCase().trim();
     target = target.toLowerCase().trim();
@@ -168,8 +181,13 @@
     return false;
   }
 
+  let filteredInstances: any[] = [];
+
   function filterDatasetBySelectedWords(action: 'add' | 'remove', word: string) {
-    logEvent('filter-dataset', { action, word, currentWords: [...selectedWordsList] });
+    if (!isDataReady) {
+      console.warn('Filtering skipped: Data is still loading.');
+      return;
+    }
 
     if (selectedWordsList.length === 0) {
       resetDatasetFilter();
@@ -177,25 +195,22 @@
     }
 
     const datasetToUse = phase === 'tutorial' ? tutorialDataset : trainingSet;
-  
     let matchingInstances: string[] = [];
-    for (const [captionWord, instances] of Object.entries(captionInstances)) {
-      if (matchWord(selectedWordsList[0], captionWord)) {
-        matchingInstances.push(...instances.map((instance) => instance.id));
-      }
-    }
 
-    for (let i = 1; i < selectedWordsList.length; i++) {
-      const word = selectedWordsList[i];
+    for (const word of selectedWordsList) {
       const wordInstances = Object.entries(captionInstances).filter(([captionWord]) =>
         matchWord(word, captionWord),
       );
 
       const wordIds = wordInstances.flatMap(([_, instances]) =>
-        instances.map((instance) => instance.id),
+        instances ? instances.map((instance) => instance?.id).filter(Boolean) : [],
       );
 
-      matchingInstances = matchingInstances.filter((id) => wordIds.includes(id));
+      if (matchingInstances.length === 0) {
+        matchingInstances = wordIds;
+      } else {
+        matchingInstances = matchingInstances.filter((id) => wordIds.includes(id));
+      }
 
       if (matchingInstances.length === 0) {
         console.warn('No matching instances for the selected words.');
@@ -205,6 +220,7 @@
     }
 
     datasetToUse.sift({ id: { $in: matchingInstances } });
+
   }
 </script>
 
