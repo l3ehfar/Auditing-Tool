@@ -39,6 +39,7 @@
     <section class="mt-6"><p>Once again, we appreciate your time and contribution! Please click the following button to complete and submit the study on Prolific.</p></section>
     <button
     class="btn btn-sm btn-primary"
+    style="margin-top: 20px;"
     on:click={() => {
       window.location.href = 'https://app.prolific.com/submissions/complete?cc=C19C00JR';
     }}>Complete Submission</button

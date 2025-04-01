@@ -326,10 +326,13 @@ export const $selectedImageTutorial = createSelectedImageStream(tutorialDataset,
 
 
 export const $imageStream = new Stream<ImageData>(Stream.never());
+export const $imageIdStream = new Stream<string | null>(Stream.never());
+
 
 $selectedImageMain.subscribe((instance) => {
   if (instance) {
     $imageStream.set(instance.x);
+    $imageIdStream.set(instance.id || instance._id || null);
     if (instance.caption && instance.caption.length > 0) {
       caption.$value.set(instance.caption);
     } else {
@@ -346,6 +349,7 @@ $selectedImageMain.subscribe((instance) => {
 $selectedImageTutorial.subscribe((instance) => {
   if (instance) {
     $imageStream.set(instance.x);
+    $imageIdStream.set(instance.id || instance._id || null);
     if (instance.caption && instance.caption.length > 0) {
       caption.$value.set(instance.caption);
     } else {

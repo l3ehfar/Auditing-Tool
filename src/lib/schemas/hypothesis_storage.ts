@@ -198,21 +198,21 @@ export async function removeHypothesis(id: Hypothesis['id']) {
   }
 }
 
-export async function addEvidence(id: Hypothesis['id'], thumbnail: string, caption: string) {
+export async function addEvidence(id: Hypothesis['id'], thumbnail: string, caption: string, instanceId?: string ) {
   const current = await service.get(id);
   if (!current) {
     throw new Error(`Hypothesis ${id} does not exist.`);
   }
 
   const blob = await fetch(thumbnail).then((res) => res.blob());
-  console.log('blob', blob);
+  // console.log('blob', blob);
   const filePath = await upload(blob);
-  console.log('filePath', filePath);
+  // console.log('filePath', filePath);
 
   const evidenceId = crypto.randomUUID();
   const newEvidence = [
     ...current.evidence,
-    { id: evidenceId, thumbnail: store.location + filePath, caption },
+    { id: evidenceId, thumbnail: store.location + filePath, caption, sourceInstanceId: instanceId || null },
   ];
   // console.log("Updated evidence before patch:", newEvidence);
 
@@ -229,7 +229,7 @@ export async function addEvidence(id: Hypothesis['id'], thumbnail: string, capti
         currentCards.map((c) => (c.id === id ? { ...c, evidence: updatedCard.evidence } : c)),
       );
 
-      logEvent('add-evidence', { hypothesisId: id, evidenceId, thumbnail, caption });
+      logEvent('add-evidence', { hypothesisId: id, evidenceId, thumbnail, caption, sourceInstanceId: instanceId });
 
       return updatedCard;
     })

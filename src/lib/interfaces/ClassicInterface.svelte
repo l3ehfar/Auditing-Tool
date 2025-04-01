@@ -5,9 +5,16 @@
   import * as fabric from 'fabric';
   import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
   import { faUpDownLeftRight } from '@fortawesome/free-solid-svg-icons';
+  import { $imageIdStream as imageIdStream } from '$lib/marcelle';
 
   let canvas: fabric.Canvas | null = null;
   let imageObject: fabric.Image | null = null;
+
+  let currentInstanceId: string | null = null;
+
+  imageIdStream.subscribe((id) => {
+    currentInstanceId = id;
+  });
 
   // let canvasEl: HTMLCanvasElement | null = null;
   let dragOverlay: HTMLDivElement | null = null;
@@ -23,14 +30,15 @@
 
   function onDragStart(event: DragEvent) {
     const canvasElement = document.querySelector('#fabric-canvas') as HTMLCanvasElement;
-    const currentCaption = caption.$value.get(); 
+    const currentCaption = caption.$value.get();
 
     if (canvasElement) {
-      const canvasUrl = canvasElement.toDataURL('image/png'); 
+      const canvasUrl = canvasElement.toDataURL('image/png');
       const data = JSON.stringify({
         type: 'image-caption',
         src: canvasUrl,
         caption: currentCaption || 'No caption generated',
+        instanceId: currentInstanceId || null,
       });
 
       event.dataTransfer?.setData('text/plain', data);

@@ -139,6 +139,7 @@
 
     try {
       const data = JSON.parse(rawData);
+      const { src, caption, instanceId } = data;
       // console.log('Dropped data:', data);
 
       let thumbnail = data.thumbnail || null;
@@ -146,7 +147,7 @@
       if (!thumbnail) {
         thumbnail = await generateThumbnailOnDrop(data.src);
       }
-      const newCard = await addEvidence(card.id, thumbnail, data.caption);
+      const newCard = await addEvidence(card.id, thumbnail, data.caption, instanceId);
       // console.log('Updated card with new evidence:', newCard);
     } catch (error) {
       console.error('Failed to parse drag data:', error);

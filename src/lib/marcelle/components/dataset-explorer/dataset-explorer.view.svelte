@@ -50,37 +50,38 @@
   async function updateClassesFromDataset() {
     if (loading) return;
     loading = true;
+
     try {
       dataStoreError = false;
       await dataset.ready;
-    } catch (e) {
-      loading = false;
-      dataStoreError = true;
-      return;
-    }
-    const labels = await dataset.distinct('y');
-    classes = labels.reduce(
-      (x, lab) => ({
-        ...x,
-        [lab]: {
-          total: 0,
-          loaded: 0,
-          instances: [],
-        },
-      }),
-      {},
-    );
-    for (const label of labels) {
-      const { total } = await dataset.find({ query: { $limit: 0, y: label } });
-      classes[label].total = total;
-      if (batchSize > 0) {
-        await loadMore(label);
-      } else {
-        while (classes[label].loaded < classes[label].total) {
-          await loadMore(label);
+
+      // 🔥 Get all currently filtered instances
+      const allInstances = await dataset.find();
+
+      // 🔁 Group by label (e.g., 'Images') as before
+      classes = {};
+      for (const instance of allInstances.data) {
+        const label = instance.y;
+        if (!classes[label]) {
+          classes[label] = {
+            total: 0,
+            loaded: 0,
+            instances: [],
+          };
         }
+
+        classes[label].total += 1;
+        classes[label].loaded += 1;
+        classes[label].instances.push({
+          id: instance.id,
+          y: instance.y,
+          thumbnail: instance.thumbnail,
+        });
       }
+    } catch (e) {
+      dataStoreError = true;
     }
+
     loading = false;
   }
 

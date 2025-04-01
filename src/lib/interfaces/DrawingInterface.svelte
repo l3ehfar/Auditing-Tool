@@ -16,12 +16,19 @@
   } from '@fortawesome/free-solid-svg-icons';
   import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
   import { logEvent } from '$lib/marcelle/log';
+  import { $imageIdStream as imageIdStream } from '$lib/marcelle';
 
   let cleanup: () => void;
   let canvas: fabric.Canvas | null = null;
   let isDrawingMode = true;
   let canvasHistory: any[] = [];
   let imageObject: fabric.Image | null = null;
+
+  let currentInstanceId: string | null = null;
+
+  imageIdStream.subscribe((id) => {
+    currentInstanceId = id;
+  });
 
   let canvasEl: HTMLCanvasElement | null = null;
   let dragOverlay: HTMLDivElement | null = null;
@@ -79,6 +86,7 @@
         type: 'image-caption',
         src: canvasUrl,
         caption: currentCaption || 'Try Again',
+        instanceId: currentInstanceId || null,
       });
 
       event.dataTransfer?.setData('text/plain', data);
@@ -111,18 +119,18 @@
     }
 
     if (canvas.isDrawingMode) {
-    if (!canvas.freeDrawingBrush) {
-      canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+      if (!canvas.freeDrawingBrush) {
+        canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+      }
+      updateBrushSettings();
     }
-    updateBrushSettings();
-  }
 
     canvas.on('mouse:up', () => {
       if (canvas.isDrawingMode) {
         canvasHistory.push(canvas.toJSON());
 
         logEvent('mask-image');
-        
+
         (async () => {
           await generateCaptionForCombinedImage();
         })();
@@ -233,37 +241,37 @@
         {/if}
       </button>
     </div> -->
-<!-- 
+    <!-- 
     {#if isDrawingMode} -->
-      <div class="brush-settings">
-        <label for="brush-size" class="text-xs">Brush Size: {brushSize}px</label>
-        <input
-          id="brush-size"
-          type="range"
-          min="1"
-          max="50"
-          bind:value={brushSize}
-          on:input={updateBrushSettings}
-          class="range range-primary"
-        />
-        <div class="color-palette">
-          <!-- <button
+    <div class="brush-settings">
+      <label for="brush-size" class="text-xs">Brush Size: {brushSize}px</label>
+      <input
+        id="brush-size"
+        type="range"
+        min="1"
+        max="50"
+        bind:value={brushSize}
+        on:input={updateBrushSettings}
+        class="range range-primary"
+      />
+      <div class="color-palette">
+        <!-- <button
             class="btn btn-xs btn-circle"
             style="background-color: #ff0000;"
             on:click={() => changeBrushColor('#ff0000')}
           ></button> -->
-          <!-- <button
+        <!-- <button
             class="btn btn-xs btn-circle"
             style="background-color: #676767; border: 1px solid #ddd;"
-            on:click={() => changeBrushColor('#')}
+            on:click={() => changeBrushColor('#e6e6e6')}
           ></button> -->
-          <button
-            class="btn btn-xs btn-circle"
-            style="background-color: #000000;"
-            on:click={() => changeBrushColor('#000000')}
-          ></button>
-        </div>
+        <button
+          class="btn btn-xs btn-circle"
+          style="background-color: #000000;"
+          on:click={() => changeBrushColor('#000000')}
+        ></button>
       </div>
+    </div>
     <!-- {/if} -->
 
     <button class="btn btn-sm" on:click={undoLastAction}>
