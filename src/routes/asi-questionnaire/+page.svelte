@@ -111,9 +111,19 @@
   }
 
   function submit() {
+
+    const failedQ23 = answers.q23 !== 4;
+    const failedQ24 = answers.q24 !== 3;
+
+    if (failedQ23 && failedQ24) {
+      goto(`${base}/returnSubmission`);
+      return;
+    }
+
     const { hostileSexism, benevolentSexism, totalScore } = calculateASIResults(
       answers as AsiQAnswers,
     );
+
     asiQ.record({
       scores: {
         hostileSexism: hostileSexism,
@@ -160,5 +170,4 @@
     max-width: 700px;
     margin: 0 auto;
   }
-
 </style>

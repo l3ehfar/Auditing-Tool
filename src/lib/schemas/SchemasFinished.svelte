@@ -152,8 +152,8 @@
                       type="radio"
                       name="evidence-{card.index}"
                       value="yes"
-                      bind:group={card.questionnaire.question2}
-                      on:change={() => saveAnswer(card.id, 'question2', 'yes')}
+                      bind:group={card.questionnaire.question1}
+                      on:change={() => saveAnswer(card.id, 'question1', 'yes')}
                       disabled={$disableInputs}
                     />
                     Yes
@@ -163,8 +163,8 @@
                       type="radio"
                       name="evidence-{card.index}"
                       value="no"
-                      bind:group={card.questionnaire.question2}
-                      on:change={() => saveAnswer(card.id, 'question2', 'no')}
+                      bind:group={card.questionnaire.question1}
+                      on:change={() => saveAnswer(card.id, 'question1', 'no')}
                       disabled={$disableInputs}
                     />
                     No
@@ -182,8 +182,8 @@
                       type="radio"
                       name="counterexamples-{card.index}"
                       value="yes"
-                      bind:group={card.questionnaire.question3}
-                      on:change={() => saveAnswer(card.id, 'question3', 'yes')}
+                      bind:group={card.questionnaire.question2}
+                      on:change={() => saveAnswer(card.id, 'question2', 'yes')}
                       disabled={$disableInputs}
                     />
                     Yes
@@ -193,8 +193,8 @@
                       type="radio"
                       name="counterexamples-{card.index}"
                       value="no"
-                      bind:group={card.questionnaire.question3}
-                      on:change={() => saveAnswer(card.id, 'question3', 'no')}
+                      bind:group={card.questionnaire.question2}
+                      on:change={() => saveAnswer(card.id, 'question2', 'no')}
                       disabled={$disableInputs}
                     />
                     No
@@ -213,8 +213,8 @@
                         type="radio"
                         name="confidence-{card.index}"
                         {value}
-                        checked={card.questionnaire.question1 == value}
-                        on:change={() => saveAnswer(card.id, 'question1', value.toString())}
+                        checked={card.questionnaire.question3 == value}
+                        on:change={() => saveAnswer(card.id, 'question3', value.toString())}
                         disabled={$disableInputs}
                       />
                       {['Very Uncertain', 'Uncertain', 'Neutral', 'Confident', 'Very Confident'][

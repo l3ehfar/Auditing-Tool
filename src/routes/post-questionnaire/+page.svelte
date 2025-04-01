@@ -12,7 +12,7 @@
   export let data: { user: User | null };
   let answers: Partial<PostQAnswers> = {};
 
-  const keys = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7'];
+  const keys = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6'];
 
   $: pageProgress.set(
     (Object.keys(answers).filter((k) => keys.includes(k)).length * 100) / keys.length,

@@ -35,33 +35,14 @@
           >jules.francoise@lisn.fr</a
         >
       </p>
-      <!-- <ul class="list-disc list-inside mt-4"> -->
-      <!-- <li>
-          Jules Françoise – <a href="mailto:jules.francoise@lisn.fr" class="text-blue-600 underline"
-            >jules.francoise@lisn.fr</a
-          >
-        </li> -->
-      <!-- <li>
-          Behnoosh Mohammadzadeh – <a
-            href="mailto:behnoosh.mohammadzadeh@universite-paris-saclay.fr"
-            class="text-blue-600 underline">behnoosh.mohammadzadeh@universite-paris-saclay.fr</a
-          >
-        </li>
-        <li>
-          Baptiste Caramiaux – <a
-            href="mailto:baptiste.caramiaux@sorbonne-universite.fr"
-            class="text-blue-600 underline">baptiste.caramiaux@sorbonne-universite.fr</a
-          >
-        </li>
-        <li>
-          Michèle Gouiffès – <a
-            href="mailto:michele.gouiffes@universite-paris-saclay.fr"
-            class="text-blue-600 underline">michele.gouiffes@universite-paris-saclay.fr</a
-          >
-        </li> -->
-      <!-- </ul> -->
     </section>
-    <section class="mt-6"><p>Once again, we appreciate your time and contribution!</p></section>
+    <section class="mt-6"><p>Once again, we appreciate your time and contribution! Please click the following button to complete and submit the study on Prolific.</p></section>
+    <button
+    class="btn btn-sm btn-primary"
+    on:click={() => {
+      window.location.href = 'https://app.prolific.com/submissions/complete?cc=C19C00JR';
+    }}>Complete Submission</button
+  >
   </div>
 </div>
 

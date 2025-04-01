@@ -112,7 +112,7 @@
         id: 'filtering-interface',
         text: 'Add "woman" keyword here, and filter the dataset.',
         attachTo: { element: '.word-selection', on: 'left' },
-        buttons: [],
+        buttons: [{ text: 'Next', action: tour.next }],
         when: {
           show: () => {
             document.querySelector('.word-selection button')?.addEventListener(
@@ -137,7 +137,7 @@
         id: 'filtering-interface-two',
         text: 'Add another keyword: "kitchen", and filter the dataset.',
         attachTo: { element: '.word-selection', on: 'left' },
-        buttons: [],
+        buttons: [{ text: 'Next', action: tour.next }],
         when: {
           show: () => {
             document.querySelector('.word-selection button')?.addEventListener(
@@ -162,7 +162,7 @@
         id: 'remove-filter',
         text: 'you can remove keywords by clicking on [X] button and re-expand the dataset.',
         attachTo: { element: '.badge-container', on: 'left' },
-        buttons: [],
+        buttons: [{ text: 'Next', action: tour.next }],
         when: {
           show: () => {
             document.querySelector('.badge-remove-btn')?.addEventListener(

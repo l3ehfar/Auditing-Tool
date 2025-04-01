@@ -123,7 +123,7 @@
             <li><strong>Inactivity tracking</strong> – Your activity during the task is tracked, and if you remain inactive for 3 minutes, you will receive a notification. Receiving three notifications will result in exclusion.</li>
             <li><strong>Technical issues</strong> – If a technical issue prevents you from completing the study, we will compensate you accordingly.</li>
         </ul>
-        <p>However, for all other screening-out cases, you will be required to return the submission and will not be paid. <strong>This is not considered a rejection.</strong></p>
+        <p>However, for all screening-out cases, you will be required to return the submission and will not be paid. <strong>This is not considered a rejection.</strong></p>
       </section>
 
     <section class="mt-6">
@@ -148,8 +148,7 @@
     <section class="mt-6">
       <h2 class="text-xl font-semibold">Benefits of the study</h2>
       <p>
-        Participation in the study will be compensated at a rate of 11$ for an hour of
-        participation.
+        Participation in the study will be compensated at a rate of 9£ for the whole study.
       </p>
     </section>
 

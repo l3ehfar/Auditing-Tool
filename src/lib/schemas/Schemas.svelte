@@ -26,8 +26,12 @@
   onMount(() => {
     const tutorialMode = get(isTutorial);
     fetchHypotheses(tutorialMode);
+    // if (userID) {
+    //   startActivityTracking(userID); // Pass userID to activity tracking
+    // }
+
     if (userID) {
-      startActivityTracking(userID); // Pass userID to activity tracking
+      sessionStorage.setItem('userID', userID); 
     }
 
     const unsubscribe = isTimerFinished.subscribe((finished) => {
@@ -37,7 +41,7 @@
           notification({
             title: 'Proceeding to Next Step',
             message: "You're moving to the next step. Please wait...",
-            duration: 5000, 
+            duration: 5000,
           });
 
           goto(`${base}/hypotheses-questionnaire`);
@@ -64,7 +68,7 @@
 
     return () => {
       if (userID) {
-        stopActivityTracking(userID); 
+        stopActivityTracking(userID);
       }
       unsubscribeTimer();
       unsubscribe();

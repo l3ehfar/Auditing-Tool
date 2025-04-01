@@ -11,7 +11,7 @@ export const PHASES = [
   { title: 'training', pages: ['video-tutorial', 'tutorial'], timeBased: false },
   { title: 'auditing', pages: ['main'], timeBased: true },
   { title: 'post-questionnaires', pages: ['hypotheses-questionnaire', 'post-questionnaire'], timeBased: false },
-  {title: 'end', pages: ['debrief'], timeBased: false },
+  {title: 'end', pages: ['debrief', 'returnSubmission'], timeBased: false },
 ];
 export const PAGES = PHASES.flatMap(({ pages }) => pages);
 export const STEPS = PAGES.length;

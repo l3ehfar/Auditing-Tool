@@ -9,12 +9,19 @@
   import { type User } from '$lib/marcelle';
   import { setProgress } from '$lib/marcelle/logging';
   import { isTimerRunning } from '$lib/marcelle/timer';
+  import { notification } from '@marcellejs/core';
 
   export let data: { user: User | null };
 
   onMount(async () => {
     await checkAndRedirect(data.user, 'main');
     setProgress('main');
+
+    notification({
+      title: 'Notice!',
+      message: 'If you see a bug or crash, try reloading the page, that usually fixes it. If not, feel free to contact us.',
+      duration: 10000,
+    });
   });
 </script>
 

@@ -2,6 +2,8 @@ import { notification } from '@marcellejs/core';
 import { store } from '$lib/marcelle';
 import { writable } from 'svelte/store';
 import { isTimerRunning } from '$lib/marcelle/timer';
+import { goto } from '$app/navigation';
+import { base } from '$app/paths';
 
 const INACTIVITY_THRESHOLD = 180000; 
 
@@ -52,6 +54,9 @@ async function checkInactivity(userID: string) {
     });
 
     lastActivityTimestamp[userID] = now;
+    if (inactivityCount >= 3) {
+      goto(`${base}/returnSubmission`);
+    }
   }
 }
 

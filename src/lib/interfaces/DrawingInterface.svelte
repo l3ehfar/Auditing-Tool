@@ -252,11 +252,11 @@
             style="background-color: #ff0000;"
             on:click={() => changeBrushColor('#ff0000')}
           ></button> -->
-          <button
+          <!-- <button
             class="btn btn-xs btn-circle"
-            style="background-color: #ffffff; border: 1px solid #ddd;"
-            on:click={() => changeBrushColor('#ffffff')}
-          ></button>
+            style="background-color: #676767; border: 1px solid #ddd;"
+            on:click={() => changeBrushColor('#')}
+          ></button> -->
           <button
             class="btn btn-xs btn-circle"
             style="background-color: #000000;"
