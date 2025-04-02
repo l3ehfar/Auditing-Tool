@@ -4,15 +4,16 @@
   import { goto } from '$app/navigation';
   import { base } from '$app/paths';
 
-  export let data: { user: User | null };
+  export let data: { user: User | null; prolificID: string;
+    condition: string; };
 
-  let prolificID = data.user ? data.user.prolificID : '';
+  let prolificID = data.user ? data.user.prolificID : data.prolificID;
   $: email = `${kebabCase(prolificID)}@marcelle.org`;
-  let password = '';
+  let password = '1234567890';
   let error: string | null = null;
   let success = false;
 
-  let condition = '';
+  let condition = data.condition;
 
   async function signup(event: SubmitEvent) {
     event.preventDefault();
@@ -91,14 +92,14 @@
           />
         </label>
 
-        <input
+        <!-- <input
           type="email"
           value={email}
           placeholder="Email"
           disabled
           class="input input-bordered"
-        />
-        <label class="form-control w-full">
+        /> -->
+        <!-- <label class="form-control w-full">
           <div class="label">
             <span class="label-text">Choose a password</span>
             {#if password.length > 0 && password.length < 8}
@@ -113,9 +114,9 @@
             class="input input-bordered w-full"
             class:input-error={password.length > 0 && password.length < 8}
           />
-        </label>
+        </label> -->
 
-        <select bind:value={condition} required class="select select-bordered w-full">
+        <select bind:value={condition} required class="select select-bordered w-full" disabled>
           <option value="" disabled selected>Select your condition</option>
           <option value="conditionOne">Condition One</option>
           <option value="conditionTwo">Condition Two</option>
