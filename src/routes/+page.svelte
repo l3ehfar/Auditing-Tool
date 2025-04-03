@@ -4,8 +4,13 @@
   import { goto } from '$app/navigation';
   import { base } from '$app/paths';
 
-  export let data: { user: User | null; prolificID: string;
-    condition: string; };
+  export let data: {
+    user: User | null;
+    prolificID: string;
+    studyID: string;
+    sessionID: string;
+    condition: string;
+  };
 
   let prolificID = data.user ? data.user.prolificID : data.prolificID;
   $: email = `${kebabCase(prolificID)}@marcelle.org`;
@@ -23,7 +28,14 @@
     console.log('Signup initiated:', { email, condition });
 
     try {
-      const res = await store.service('users').create({ prolificID, email, password, condition });
+      const res = await store.service('users').create({
+        prolificID,
+        studyID: data.studyID,
+        sessionID: data.sessionID,
+        email,
+        password,
+        condition,
+      });
       console.log('Created user', res);
 
       localStorage.setItem('user_timer', '1800');
@@ -81,15 +93,27 @@
       <form on:submit|preventDefault={signup} class="flex flex-col w-full gap-4">
         <label class="form-control w-full">
           <div class="label">
-            <span class="label-text">Prolific ID</span>
+            <span class="label-text">Prolific PID</span>
           </div>
           <input
             type="text"
             placeholder="Let's use our name for now"
             bind:value={prolificID}
             class="input input-bordered w-full"
-            disabled={data.user !== null}
+            disabled
           />
+        </label>
+        <!-- <label class="form-control w-full">
+          <div class="label">
+            <span class="label-text">Study ID</span>
+          </div>
+          <input type="text" value={data.studyID} class="input input-bordered w-full" disabled />
+        </label> -->
+        <label class="form-control w-full">
+          <div class="label">
+            <span class="label-text">Session ID</span>
+          </div>
+          <input type="text" value={data.sessionID} class="input input-bordered w-full" disabled />
         </label>
 
         <!-- <input
@@ -116,12 +140,12 @@
           />
         </label> -->
 
-        <select bind:value={condition} required class="select select-bordered w-full" disabled>
+        <!-- <select bind:value={condition} required class="select select-bordered w-full" disabled>
           <option value="" disabled selected>Select your condition</option>
           <option value="conditionOne">Condition One</option>
           <option value="conditionTwo">Condition Two</option>
           <option value="conditionThree">Condition Three</option>
-        </select>
+        </select> -->
 
         <button class="btn btn-secondary">Continue</button>
       </form>
