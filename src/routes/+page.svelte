@@ -13,12 +13,36 @@
   };
 
   let prolificID = data.user ? data.user.prolificID : data.prolificID;
-  $: email = `${kebabCase(prolificID)}@marcelle.org`;
+  let prolificIDMissing = !prolificID;
+  function generateRandomID(length = 8) {
+    return Math.random()
+      .toString(36)
+      .substring(2, 2 + length);
+  }
+
+  $: email =
+    prolificID && prolificID.trim()
+      ? `${kebabCase(prolificID)}@marcelle.org`
+      : `anonymous-${generateRandomID()}@marcelle.org`;
+
   let password = '1234567890';
   let error: string | null = null;
   let success = false;
 
   let condition = data.condition;
+
+  if (!condition) {
+    const random = Math.floor(Math.random() * 3) + 1;
+    const conditionMap: Record<string, string> = {
+      '1': 'conditionOne',
+      '2': 'conditionTwo',
+      '3': 'conditionThree',
+    };
+    condition = conditionMap[random.toString()];
+  }
+
+  let studyID = data.studyID || `study-${generateRandomID()}`;
+  let sessionID = data.sessionID || `session-${generateRandomID()}`;
 
   async function signup(event: SubmitEvent) {
     event.preventDefault();
@@ -30,8 +54,8 @@
     try {
       const res = await store.service('users').create({
         prolificID,
-        studyID: data.studyID,
-        sessionID: data.sessionID,
+        studyID,
+        sessionID,
         email,
         password,
         condition,
@@ -97,7 +121,19 @@
           </div>
           <input
             type="text"
-            placeholder="Let's use our name for now"
+            placeholder="Enter your Prolific ID"
+            bind:value={prolificID}
+            class="input input-bordered w-full"
+            disabled={data.user !== null || !prolificIDMissing}
+          />
+          {#if prolificIDMissing}
+            <p class="text-warning text-sm mt-1">
+              We couldn't detect your Prolific ID. Please enter it manually.
+            </p>
+          {/if}
+          <input
+            type="text"
+            placeholder="your prolific id"
             bind:value={prolificID}
             class="input input-bordered w-full"
             disabled
@@ -113,7 +149,7 @@
           <div class="label">
             <span class="label-text">Session ID</span>
           </div>
-          <input type="text" value={data.sessionID} class="input input-bordered w-full" disabled />
+          <input type="text" value={sessionID} class="input input-bordered w-full" disabled />
         </label>
 
         <!-- <input
