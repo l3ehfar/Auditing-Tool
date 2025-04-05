@@ -2,7 +2,7 @@ import { writable } from 'svelte/store';
 import { startTimer, loadTimer } from './timer';
 
 export const PHASES = [
-  { title: 'introduction', pages: ['introduction'], timeBased: false },
+  { title: 'introduction', pages: ['introduction', 'task-description'], timeBased: false },
   {
     title: 'pre-questionnaires',
     pages: ['pre-questionnaire', 'asi-questionnaire'],

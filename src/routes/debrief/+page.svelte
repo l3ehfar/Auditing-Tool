@@ -41,7 +41,7 @@
     class="btn btn-sm btn-primary"
     style="margin-top: 20px;"
     on:click={() => {
-      window.location.href = 'https://app.prolific.com/submissions/complete?cc=C19C00JR';
+      window.location.href = 'https://app.prolific.com/submissions/complete?cc=C1KD169B';
     }}>Complete Submission</button
   >
   </div>

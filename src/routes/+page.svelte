@@ -3,6 +3,36 @@
   import { store, type User } from '$lib/marcelle/store';
   import { goto } from '$app/navigation';
   import { base } from '$app/paths';
+  import { browser } from '$app/environment';
+
+  if (browser) {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent,
+    );
+    const isSmallScreen = window.innerWidth < 1024;
+
+    const isOldBrowser = (() => {
+      const ua = navigator.userAgent;
+
+      const chrome = ua.match(/Chrome\/(\d+)/);
+      if (chrome && parseInt(chrome[1]) < 90) return true;
+
+      const firefox = ua.match(/Firefox\/(\d+)/);
+      if (firefox && parseInt(firefox[1]) < 90) return true;
+
+      const safari = ua.match(/Version\/(\d+).+Safari/);
+      if (safari && parseInt(safari[1]) < 13) return true;
+
+      const edge = ua.match(/Edg\/(\d+)/);
+      if (edge && parseInt(edge[1]) < 90) return true;
+
+      return false;
+    })();
+
+    if (isMobile || isSmallScreen || isOldBrowser) {
+      goto(`${base}/desktop-only`);
+    }
+  }
 
   export let data: {
     user: User | null;
@@ -14,6 +44,16 @@
 
   let prolificID = data.user ? data.user.prolificID : data.prolificID;
   let prolificIDMissing = !prolificID;
+
+  function isPlaceholder(val: string) {
+    return val?.includes('%') || val?.includes('{') || val?.includes('}');
+  }
+
+  if (isPlaceholder(prolificID)) {
+    prolificIDMissing = true;
+    prolificID = '';
+  }
+
   function generateRandomID(length = 8) {
     return Math.random()
       .toString(36)
@@ -41,8 +81,15 @@
     condition = conditionMap[random.toString()];
   }
 
-  let studyID = data.studyID || `study-${generateRandomID()}`;
-  let sessionID = data.sessionID || `session-${generateRandomID()}`;
+  let studyID = data.studyID;
+  if (!studyID || isPlaceholder(studyID)) {
+    studyID = `67d04afd45ed6e73327a7ed1`;
+  }
+
+  let sessionID = data.sessionID;
+  if (!sessionID || isPlaceholder(sessionID)) {
+    sessionID = `session-${generateRandomID()}`;
+  }
 
   async function signup(event: SubmitEvent) {
     event.preventDefault();
@@ -193,7 +240,7 @@
           </div>
           <input
             type="text"
-            placeholder="Let's use our name for now"
+            placeholder="your prolific id"
             bind:value={prolificID}
             class="input input-bordered w-full"
             disabled={data.user !== null}
