@@ -192,12 +192,12 @@
           </div>
           <input type="text" value={data.studyID} class="input input-bordered w-full" disabled />
         </label> -->
-        <label class="form-control w-full">
+        <!-- <label class="form-control w-full">
           <div class="label">
             <span class="label-text">Session ID</span>
           </div>
           <input type="text" value={sessionID} class="input input-bordered w-full" disabled />
-        </label>
+        </label> -->
 
         <!-- <input
           type="email"
