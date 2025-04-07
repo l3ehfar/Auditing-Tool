@@ -65,7 +65,7 @@
       ? `${kebabCase(prolificID)}@marcelle.org`
       : `anonymous-${generateRandomID()}@marcelle.org`;
 
-  let password = '1234567890';
+  let password = generateRandomID();
   let error: string | null = null;
   let success = false;
 
