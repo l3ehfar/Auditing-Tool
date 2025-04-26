@@ -3,7 +3,6 @@ import {
   textInput,
   imageUpload,
   type Instance,
-  select,
   imageDisplay,
   Stream,
   text,
@@ -14,12 +13,12 @@ import { huggingfaceModel } from './components';
 import { writable } from 'svelte/store';
 import { store } from './store';
 
-export let dynamicClassLabel = writable('all');
+export const dynamicClassLabel = writable('all');
 
 // export let aggregatedPersonFrequency: { [key: string]: number } = { male: 0, female: 0, classLabel: 0 };
 // export let coOccurrences: { [key: string]: { [word: string]: number } } = { male: {}, female: {}, classLabel: {} };
 // export let captionInstances: { [key: string]: { [word: string]: any[] } } = { male: {}, female: {}, classLabel: {} };
-export let captionInstances: { [word: string]: any[] } = {};
+export const captionInstances: { [word: string]: any[] } = {};
 
 export const genderedWords = {
   male: ['man', 'he', 'him', 'his', 'boy', 'male', 'men'],
@@ -36,7 +35,6 @@ export interface ImageInstance extends Instance {
   public: boolean;
 }
 
-
 export async function fetchDatasetFromGitHub(url: string, datasetInstance: any) {
   try {
     const response = await fetch(url);
@@ -52,7 +50,7 @@ export async function fetchDatasetFromGitHub(url: string, datasetInstance: any) 
       const thumbCtx = thumbnailCanvas.getContext('2d');
 
       if (!thumbCtx) {
-        throw new Error("Failed to create canvas context for thumbnail.");
+        throw new Error('Failed to create canvas context for thumbnail.');
       }
 
       thumbnailCanvas.width = 100;
@@ -90,7 +88,8 @@ export async function fetchMainDatasetFromGitHub() {
   await fetchDatasetFromGitHub(url, trainingSet);
 }
 export async function fetchTutorialDatasetFromGitHub() {
-  const url = 'https://raw.githubusercontent.com/l3ehfar/UserStudyDataset/main/Tutorialcaptions.json';
+  const url =
+    'https://raw.githubusercontent.com/l3ehfar/UserStudyDataset/main/Tutorialcaptions.json';
   await fetchDatasetFromGitHub(url, tutorialDataset);
 }
 
@@ -111,12 +110,12 @@ async function fetchImageAsImageData(imageUrl: string): Promise<ImageData> {
   return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
+console.log('import.meta.env.VITE_HF_TOKEN', import.meta.env.VITE_HF_TOKEN);
 const HFmodel = huggingfaceModel({
   task: 'image-to-text',
-  apiToken: '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',
+  apiToken: import.meta.env.VITE_HF_TOKEN,
   inference: 'api',
 });
-
 
 export const caption = text('model generated caption:');
 export const input = imageUpload();
@@ -134,10 +133,9 @@ const unwantedWords = [
   'arraffed',
 ];
 
-
-function cleanCaption(caption: string): string {
+function cleanCaption(c: string): string {
   const regex = new RegExp(`\\b(${unwantedWords.join('|')})\\b`, 'gi');
-  const cleanedCaption = caption.replace(regex, 'a ').replace(/\s+/g, ' ').trim();
+  const cleanedCaption = c.replace(regex, 'a ').replace(/\s+/g, ' ').trim();
 
   return cleanedCaption;
 }
@@ -265,12 +263,12 @@ input.$images.subscribe(async (image) => {
   }
 });
 
-export let trainingSet = dataset<ImageInstance>('training-set-dashboard', store);
-// export let fullTrainingSet = dataset<ImageInstance>('training-set-dashboard', store);
-export let tutorialDataset = dataset<ImageInstance>('tutorial-dataset-dashboard', store);
+export const trainingSet = dataset<ImageInstance>('training-set-dashboard', store);
+// export const fullTrainingSet = dataset<ImageInstance>('training-set-dashboard', store);
+export const tutorialDataset = dataset<ImageInstance>('tutorial-dataset-dashboard', store);
 
-export let datasetExplorerComponent = datasetExplorer(trainingSet);
-export let TutorialdatasetExplorerComponent = datasetExplorer(tutorialDataset);
+export const datasetExplorerComponent = datasetExplorer(trainingSet);
+export const TutorialdatasetExplorerComponent = datasetExplorer(tutorialDataset);
 
 // export const $currentClasses = new Stream<string[]>([], true);
 // fullTrainingSet.$changes
@@ -322,12 +320,13 @@ function createSelectedImageStream(datasetInstance: any, datasetExplorerInstance
 }
 
 export const $selectedImageMain = createSelectedImageStream(trainingSet, datasetExplorerComponent);
-export const $selectedImageTutorial = createSelectedImageStream(tutorialDataset, TutorialdatasetExplorerComponent);
-
+export const $selectedImageTutorial = createSelectedImageStream(
+  tutorialDataset,
+  TutorialdatasetExplorerComponent,
+);
 
 export const $imageStream = new Stream<ImageData>(Stream.never());
 export const $imageIdStream = new Stream<string | null>(Stream.never());
-
 
 $selectedImageMain.subscribe((instance) => {
   if (instance) {
@@ -390,6 +389,5 @@ input.$images.subscribe(async (image) => {
 });
 
 export const ImageDisplay = imageDisplay($imageStream);
-
 
 // fetchDatasetFromGitHub();
