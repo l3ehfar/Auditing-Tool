@@ -110,7 +110,6 @@ async function fetchImageAsImageData(imageUrl: string): Promise<ImageData> {
   return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
-console.log('import.meta.env.VITE_HF_TOKEN', import.meta.env.VITE_HF_TOKEN);
 const HFmodel = huggingfaceModel({
   task: 'image-to-text',
   apiToken: import.meta.env.VITE_HF_TOKEN,
